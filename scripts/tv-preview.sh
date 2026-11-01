@@ -67,4 +67,5 @@ fi
 [ "$ACTION" = build ] && exit 0
 
 tv_install build/tv/${APP_ID}_*.ipk
+if [ -n "$ROOT" ]; then root_install_scripts; fi
 "$BIN/ares-launch" --device "$DEVICE" "$APP_ID"

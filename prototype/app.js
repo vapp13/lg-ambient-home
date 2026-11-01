@@ -1042,7 +1042,11 @@
     });
     C.apps = apps;
     C.dock = C.dock.filter(function (key) { return apps[key]; });
-    C.inputs = tv.inputs.map(function (d, i) {
+    C.inputs = tvInputs(tv);
+  }
+
+  function tvInputs(tv) {
+    return tv.inputs.map(function (d, i) {
       var n = (/hdmi(\d)/.exec(d.appId) || [])[1] || String(i + 1), ps5 = /ps5|playstation/i.test(d.label);
       var named = !ps5 && d.label && !/^hdmi\s*\d$/i.test(d.label);
       return {
@@ -1053,8 +1057,45 @@
     });
   }
 
+  // ---------- The live list of apps and inputs (rooted TVs) ----------
+  // scripts/tv-root-live.js rewrites tv-apps.json on the TV when an app is installed or removed or a device is
+  // plugged in. A change of inputs updates the Inputs row in place; a change of apps reloads the page, once no menu
+  // is open and nothing is being moved.
+  function watchTvApps() {
+    var known = window.TV_APPS || null, appsChanged = false;
+    function same(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+    function check() {
+      if (appsChanged) { reloadWhenFree(); return; }
+      var x = new XMLHttpRequest();
+      x.onload = function () {
+        var tv;
+        try { tv = JSON.parse(x.responseText); } catch (e) { return; }
+        if (!tv || !tv.apps || !tv.inputs || (known && same(tv, known))) return;
+        appsChanged = !known || !same(tv.apps, known.apps);
+        known = tv;
+        if (appsChanged) reloadWhenFree();
+        else { C.inputs = tvInputs(tv); buildInputs(); }
+      };
+      x.open('GET', 'tv-apps.json');
+      x.send();
+    }
+    // Once per list: if the page still loads an older one, it carries on with that rather than reloading again.
+    function reloadWhenFree() {
+      if (stack.length || moving || okDown) return;
+      var mark = JSON.stringify(known.apps).length + ':' + known.apps.map(function (a) { return a.id; }).join(',');
+      try {
+        if (sessionStorage.getItem('ambientHome.reloadedFor') === mark) { appsChanged = false; return; }
+        sessionStorage.setItem('ambientHome.reloadedFor', mark);
+      } catch (e) { /* reload anyway */ }
+      location.reload();
+    }
+    setInterval(function () { if (!document.hidden) check(); }, 10000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
+  }
+
   // ---------- Start ----------
   if (window.TV_APPS) useTvApps(window.TV_APPS);
+  if (onTv()) watchTvApps();
   if (/Web0S|webOS/i.test(navigator.userAgent)) document.body.classList.add('on-tv');
   fit();
   window.addEventListener('resize', fit);

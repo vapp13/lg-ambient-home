@@ -49,6 +49,18 @@ tv_ssh() {
   ssh -p "$port" "${opts[@]}" "$login" "$@"
 }
 
+# Rooted TV: the startup script (tv-root-boot.sh) and the live list of apps and inputs it starts (tv-root-live.js),
+# put in place and run now.
+ROOT_BOOT=/var/lib/webosbrew/init.d/50-ambient-home
+ROOT_LIVE=/var/lib/webosbrew/ambient-home/tv-root-live.js
+root_install_scripts() {
+  tr -d '\r' < scripts/tv-root-live.js |
+    tv_ssh "mkdir -p ${ROOT_LIVE%/*} && cat > $ROOT_LIVE.tmp && mv -f $ROOT_LIVE.tmp $ROOT_LIVE"
+  tr -d '\r' < scripts/tv-root-boot.sh |
+    tv_ssh "mkdir -p ${ROOT_BOOT%/*} && cat > $ROOT_BOOT.tmp && chmod 755 $ROOT_BOOT.tmp && mv -f $ROOT_BOOT.tmp $ROOT_BOOT"
+  tv_ssh "sh $ROOT_BOOT --now"
+}
+
 # tv_install PACKAGE.ipk: installs a package on the TV, replacing an older version.
 tv_install() {
   if [ -z "$ROOT" ]; then

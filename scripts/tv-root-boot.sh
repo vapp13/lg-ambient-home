@@ -1,12 +1,14 @@
 #!/bin/sh
-# Rooted TVs only. scripts/tv-home.sh install copies this to /var/lib/webosbrew/init.d/50-ambient-home, which the
-# Homebrew Channel runs as root at every boot, and runs it once with --now (repairs only, no Helper start).
+# Rooted TVs only. scripts/tv-preview.sh and scripts/tv-home.sh install copy this to
+# /var/lib/webosbrew/init.d/50-ambient-home, which the Homebrew Channel runs as root at every boot, and run it once
+# with --now (no Helper start).
 # 1. LG's devmode.conf runs chmod -R 777 /media/developer at every boot. Home Helper refuses to start with a
 #    world-writable data folder, so put back the modes scripts/fix-ipk.py gives the packages, and the jailer group
 #    (5000) that lets Helper and Ambient Home's service share Helper's data folder.
 # 2. Ambient Home's service runs in a jail that sees only its own folder; bind Helper's folder in, so Settings can
 #    tell whether Helper is installed and running and switch the Home button.
-# 3. At boot, start Helper if Home is set to Ambient Home and Home was not pressed three times.
+# 3. Start tv-root-live.js, which keeps Ambient Home's list of apps and inputs up to date.
+# 4. At boot, start Helper if Home is set to Ambient Home and Home was not pressed three times.
 A=/media/developer/apps/usr/palm
 HELPER=$A/applications/com.local.nativehome
 STATE=$HELPER/state
@@ -34,6 +36,15 @@ done
 J=/var/palm/jail/com.local.ambienthome.service$HELPER
 if [ -d "$HELPER" ] && ! grep -qs " $J " /proc/mounts; then
   mkdir -p "$J" && mount --bind "$HELPER" "$J"
+fi
+
+# Keep Ambient Home's list of the TV's apps and inputs up to date (tv-root-live.js). After an install (--now) the
+# running copy makes way for the new one.
+LIVE=/var/lib/webosbrew/ambient-home/tv-root-live.js
+if [ -f "$LIVE" ] && [ -d $A/applications/com.local.ambienthome ]; then
+  pid=$(cat /tmp/ambient-home-live.pid 2>/dev/null)
+  if [ "$1" = --now ] && [ -n "$pid" ] && kill "$pid" 2>/dev/null; then sleep 1; fi
+  (cd / && setsid node "$LIVE" </dev/null >/dev/null 2>&1 &)
 fi
 
 [ "$1" = --now ] && exit 0

@@ -25,7 +25,8 @@
 # TV_DEVICE picks another device name than "lgtv".
 #
 # On a rooted TV (Homebrew Channel), install also puts scripts/tv-root-boot.sh in the Homebrew Channel's startup
-# folder: the TV resets the apps' file modes at every boot, which would stop Helper from starting.
+# folder: the TV resets the apps' file modes at every boot, which would stop Helper from starting. It also starts
+# scripts/tv-root-live.js, which keeps the list of the TV's apps and inputs up to date.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -33,7 +34,6 @@ cd "$(dirname "$0")/.."
 APP_ID="com.local.ambienthome"
 HELPER="com.local.nativehome"
 STATE="/media/developer/apps/usr/palm/applications/$HELPER/state"
-ROOT_BOOT="/var/lib/webosbrew/init.d/50-ambient-home"
 
 zig() {
   local venv_python=tools/venv/bin/python
@@ -128,8 +128,7 @@ case "${1:-}" in
     tv_install build/tv/${APP_ID}_*.ipk
     tv_install build/tv/${HELPER}_*.ipk
     if [ -n "$ROOT" ]; then
-      tr -d '\r' < scripts/tv-root-boot.sh |
-        tv_ssh "mkdir -p ${ROOT_BOOT%/*} && cat > $ROOT_BOOT.tmp && chmod 755 $ROOT_BOOT.tmp && mv -f $ROOT_BOOT.tmp $ROOT_BOOT"
+      root_install_scripts
     fi
     push build/helper-setup/ssap-key.json ssap-key.json 640
     push build/helper-setup/apps.json apps.json 644
@@ -186,7 +185,7 @@ case "${1:-}" in
       tv "luna-send-pub -n 1 luna://$HELPER.service/disable '{}'" >/dev/null
       stop_helper
       if [ -n "$ROOT" ]; then
-        tv "rm -f $ROOT_BOOT; umount /var/palm/jail/com.local.ambienthome.service/media/developer/apps/usr/palm/applications/$HELPER 2>/dev/null" >/dev/null
+        tv "kill \$(cat /tmp/ambient-home-live.pid 2>/dev/null) 2>/dev/null; rm -rf $ROOT_BOOT ${ROOT_LIVE%/*}; umount /var/palm/jail/com.local.ambienthome.service/media/developer/apps/usr/palm/applications/$HELPER 2>/dev/null" >/dev/null
       fi
       "$BIN/ares-install" --device "$DEVICE" --remove "$HELPER"
     fi

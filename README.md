@@ -134,7 +134,7 @@ If your TV is rooted and has the [Homebrew Channel](https://github.com/webosbrew
    ```
 4. **Restart the TV** by unplugging it for 30 seconds: the power button only puts it in standby. Once a key is on the TV, the Homebrew Channel stops setting the `alpine` password at startup.
 
-Then follow the steps above from step 2. The scripts see that the TV is registered as root and install over SSH. `scripts/tv-home.sh install` also adds a small startup script, [`scripts/tv-root-boot.sh`](scripts/tv-root-boot.sh), to the Homebrew Channel's startup folder. At every boot the TV makes Developer Mode files writable by any app, and Home Helper refuses to start like that, so the script puts back safe permissions and starts Helper. It also lets Ambient Home's settings see Home Helper. `scripts/tv-home.sh remove` takes it off again.
+Then follow the steps above from step 2, leaving out step 3: on a rooted TV your apps and inputs stay up to date by themselves. The scripts see that the TV is registered as root and install over SSH. They also add a small startup script, [`scripts/tv-root-boot.sh`](scripts/tv-root-boot.sh), to the Homebrew Channel's startup folder. At every boot the TV makes Developer Mode files writable by any app, and Home Helper refuses to start like that, so the script puts back safe permissions and starts Helper. It also lets Ambient Home's settings see Home Helper, and starts [`scripts/tv-root-live.js`](scripts/tv-root-live.js), which notices apps you install or remove and devices you plug in, and updates Ambient Home within seconds. `scripts/tv-home.sh remove` takes it all off again.
 
 ## 🗂️ What's inside
 
