@@ -10,7 +10,13 @@
 
   var stage = byId('stage');
   var ui = byId('ui');
-  var idleMinutes = C.idleMinutes;
+  // The idle screen's delay: Settings' choice, kept on the TV, or config.js until one is made.
+  var IDLE = 'ambientHome.idleMinutes';
+  var idleMinutes = (function () {
+    var saved = null;
+    try { saved = localStorage.getItem(IDLE); } catch (e) { /* not saved */ }
+    return saved !== null && /^\d+$/.test(saved) ? +saved : C.idleMinutes;
+  })();
   var scope = ui, current = null, page = 'a', stack = [], memory = {};
   var moving = null, okDown = false, holdTimer = null;
   var idleOn = false, idleTimer = null, idleMover = null, sleepTimer = null, toastTimer = null, helpTimer = null, launchTimer = null;
@@ -570,6 +576,7 @@
       else toast(e.dataset.value === 'lg' ? 'Home button now opens LG Home. Switch back here any time.' : 'Home button opens this home screen.');
     } else {
       idleMinutes = +e.dataset.value;
+      try { localStorage.setItem(IDLE, String(idleMinutes)); } catch (err) { /* lasts until Ambient Home closes */ }
       toast(idleMinutes ? 'Idle screen after ' + idleMinutes + ' min' : 'Idle screen off');
       resetIdle();
     }
@@ -920,6 +927,7 @@
   assignGridRows(byId('allAppsGrid'));
   showShortcutChoice();
   showHiddenCount();
+  each(document.querySelectorAll('[data-group="idle"]'), function (o) { o.classList.toggle('is-selected', +o.dataset.value === idleMinutes); });
   buildLaunchFx();
   setFocus(byId('appsTrack').firstChild);
   moveIdle();
