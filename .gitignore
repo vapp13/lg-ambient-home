@@ -21,3 +21,5 @@ __pycache__/
 prototype/tv-apps.js
 prototype/tv-icons/
 prototype/config.local.js
+prototype/tv-apps.json
+prototype/stremio.json

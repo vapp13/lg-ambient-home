@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Rooted TVs only. Keeps Ambient Home's list of the TV's apps and inputs (tv-apps.js, tv-apps.json and tv-icons/ in
 // its folder) and Home Helper's list of apps up to date, so apps installed or removed on the TV and devices plugged
-// in show up by themselves: no scripts/tv-sync-apps.mjs from the computer. tv-root-boot.sh starts it at boot, as
-// root; it reads the TV every 10 seconds with luna-send and writes only when something changed.
+// in show up by themselves: no scripts/tv-sync-apps.mjs from the computer. It also keeps Stremio's Continue watching
+// (tv-root-stremio.js). tv-root-boot.sh starts it at boot, as root; it reads the TV every 10 seconds with luna-send
+// and writes only when something changed.
 'use strict';
 const fs = require('fs');
 const { execFile } = require('child_process');
@@ -94,8 +95,15 @@ async function tick() {
   }
 }
 
+// Stremio's Continue watching (tv-root-stremio.js), once a minute.
+let rounds = 0;
+function stremio() {
+  if (rounds++ % 6 || !fs.existsSync(APP)) return Promise.resolve();
+  return require('./tv-root-stremio.js').updateContinueWatching(APP, log);
+}
+
 if (alreadyRunning()) process.exit(0);
 fs.writeFileSync(PID, String(process.pid));
 (function loop() {
-  tick().catch((e) => log(String(e && e.stack || e))).then(() => setTimeout(loop, EVERY));
+  tick().then(stremio).catch((e) => log(String(e && e.stack || e))).then(() => setTimeout(loop, EVERY));
 })();

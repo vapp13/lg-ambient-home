@@ -49,13 +49,16 @@ tv_ssh() {
   ssh -p "$port" "${opts[@]}" "$login" "$@"
 }
 
-# Rooted TV: the startup script (tv-root-boot.sh) and the live list of apps and inputs it starts (tv-root-live.js),
-# put in place and run now.
+# Rooted TV: the startup script (tv-root-boot.sh) and what it starts, the live list of apps and inputs and Stremio's
+# Continue watching (tv-root-live.js, tv-root-stremio.js), put in place and run now.
 ROOT_BOOT=/var/lib/webosbrew/init.d/50-ambient-home
 ROOT_LIVE=/var/lib/webosbrew/ambient-home/tv-root-live.js
 root_install_scripts() {
-  tr -d '\r' < scripts/tv-root-live.js |
-    tv_ssh "mkdir -p ${ROOT_LIVE%/*} && cat > $ROOT_LIVE.tmp && mv -f $ROOT_LIVE.tmp $ROOT_LIVE"
+  local f
+  for f in tv-root-live.js tv-root-stremio.js; do
+    tr -d '\r' < "scripts/$f" |
+      tv_ssh "mkdir -p ${ROOT_LIVE%/*} && cat > ${ROOT_LIVE%/*}/$f.tmp && mv -f ${ROOT_LIVE%/*}/$f.tmp ${ROOT_LIVE%/*}/$f"
+  done
   tr -d '\r' < scripts/tv-root-boot.sh |
     tv_ssh "mkdir -p ${ROOT_BOOT%/*} && cat > $ROOT_BOOT.tmp && chmod 755 $ROOT_BOOT.tmp && mv -f $ROOT_BOOT.tmp $ROOT_BOOT"
   tv_ssh "sh $ROOT_BOOT --now"

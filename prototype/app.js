@@ -93,6 +93,22 @@
     return t;
   }
 
+  // A film or episode from Stremio's Continue watching (stremio.json, written on the TV by tv-root-stremio.js).
+  function stremioCard(item) {
+    var t = el('div', 'media-card is-stremio'), pic = item.background || item.poster;
+    setData(t, { row: 3, action: 'stremio', id: item.videoId, show: item.id, kind: item.type, title: item.name,
+      subtitle: item.detail, pic: pic, accent: '#8b5cf6' });
+    t.innerHTML = '<div class="media-face">' + (pic ? '<img class="media-pic" alt="" src="' + esc(pic) + '">' : '') +
+      '<i class="media-shade"></i><i class="shine"></i></div>' +
+      '<div class="media-info"><div class="media-title">' + esc(item.name) + '</div>' +
+      '<div class="media-detail">' + esc(item.detail) + '</div>' +
+      '<div class="media-progress"><span style="width:' + Math.max(2, Math.round(item.progress * 100)) + '%"></span></div></div>';
+    var img = t.querySelector('img');
+    // Not every title has a wide picture; the poster stands in.
+    if (img) img.onerror = function () { img.onerror = null; if (item.poster && pic !== item.poster) img.src = item.poster; else img.remove(); };
+    return t;
+  }
+
   function homeTile(item) {
     var t = el('div', 'home-tile' + (item.type === 'scene' ? ' home-scene' : ''));
     setData(t, { row: 4, action: 'home', id: item.id, accent: item.type === 'scene' ? '#6366f1' : '#f5b942' });
@@ -112,18 +128,11 @@
     savedDockOrder(C.dock).forEach(function (id) { apps.appendChild(appTile(id, 1, 'dock')); });
     if (allAppsShortcut()) apps.appendChild(allAppsTile());
     buildInputs();
-    if (C.media.show !== false) C.media.items.forEach(function (item) { media.appendChild(mediaCard(item)); });
     if (C.home.show !== false) C.home.items.forEach(function (item) { home.appendChild(homeTile(item)); });
-    byId('mediaChip').textContent = C.media.source + ' · demo';
     byId('homeChip').textContent = C.home.source + ' · demo';
     // A row turned off in the config leaves the screen; Up and Down skip it, as they skip any row without tiles.
-    var below = [];
-    [['media', 'Continue watching'], ['home', 'Home']].forEach(function (r) {
-      if (C[r[0]].show === false) { byId(r[0] + 'Label').style.display = byId(r[0] + 'Row').style.display = 'none'; }
-      else below.push(r[1]);
-    });
-    below.push('All apps');
-    byId('pageA').querySelector('.more-hint').innerHTML = '&darr;&nbsp; ' + below.join(' &middot; ');
+    if (C.home.show === false) byId('homeLabel').style.display = byId('homeRow').style.display = 'none';
+    buildMedia();
     byId('settingsButton').innerHTML = ART.gear();
   }
 
@@ -419,6 +428,28 @@
 
   // ---------- The second page: Continue watching and Home when shown, then All apps ----------
   // Its sections stack from the top, under the clock, and the page scrolls to keep the focused item in view.
+  // Continue watching: Stremio's when it has any (see tv-root-stremio.js), else the demo row unless config.js turns
+  // it off. Called again when Stremio's list changes.
+  var stremio = null;
+
+  function buildMedia() {
+    var track = byId('mediaTrack'), real = !!(stremio && stremio.items && stremio.items.length);
+    var shown = real || C.media.show !== false, focusRow = current && current.parentNode === track;
+    track.innerHTML = '';
+    track._x = 0;
+    track.style.transform = '';
+    if (real) stremio.items.forEach(function (item) { track.appendChild(stremioCard(item)); });
+    else if (shown) C.media.items.forEach(function (item) { track.appendChild(mediaCard(item)); });
+    byId('mediaChip').textContent = real ? 'Stremio' : C.media.source + ' · demo';
+    byId('mediaLabel').style.display = byId('mediaRow').style.display = shown ? '' : 'none';
+    var below = [];
+    if (shown) below.push('Continue watching');
+    if (C.home.show !== false) below.push('Home');
+    below.push('All apps');
+    byId('pageA').querySelector('.more-hint').innerHTML = '&darr;&nbsp; ' + below.join(' &middot; ');
+    if (focusRow) setFocus(track.firstChild || byId('allAppsGrid').querySelector('.app-icon'));
+  }
+
   function layoutPageB() {
     var y = 34;
     [['mediaLabel', 'mediaRow'], ['homeLabel', 'homeRow'], ['gridLabel', 'allAppsGrid']].forEach(function (s) {
@@ -576,6 +607,7 @@
     else if (action === 'settings') openSettings();
     else if (action === 'forecast') openOverlay(byId('forecast'));
     else if (action === 'media') resumeMedia(find(C.media.items, id));
+    else if (action === 'stremio') openStremio(e);
     else if (action === 'home') toggleHome(find(C.home.items, id), e);
     else if (action === 'seg') selectOption(e);
     else if (action === 'lghome') openLgHome();
@@ -610,13 +642,13 @@
   }
 
   // Inputs on webOS are apps too (com.webos.app.hdmi1 and so on).
-  function openOnTv(appId, title) {
+  function openOnTv(appId, title, params) {
     if (!appId) {
       closeOverlay();
       toast(title + ' is not linked to an app on this TV yet');
       return;
     }
-    callLuna('luna://com.webos.applicationManager/launch', { id: appId }, function (result) {
+    callLuna('luna://com.webos.applicationManager/launch', params ? { id: appId, params: params } : { id: appId }, function (result) {
       if (result.returnValue !== false) return;
       closeOverlay();
       toast('Could not open ' + title);
@@ -636,6 +668,18 @@
       title: inp.title, sub: 'Switching to ' + inp.subtitle + '…',
       note: onTv() ? '' : 'Prototype: on the TV this switches to ' + inp.subtitle + '. Press Back to return.' });
     if (onTv()) openOnTv(inp.appId, inp.title);
+  }
+
+  // Opens the title in Stremio, on the episode last watched: Stremio's deep link, stremio:///detail/type/id/video.
+  function openStremio(e) {
+    var d = e.dataset, app = C.apps['io.strem.tv'];
+    openLaunch({ accent: d.accent, art: d.pic ? '<img class="launch-pic" alt="" src="' + esc(d.pic) + '">' : '',
+      kind: 'is-icon', title: d.title, sub: 'Opening in Stremio · ' + d.subtitle,
+      note: onTv() ? '' : 'Prototype: on the TV this opens ' + d.title + ' in Stremio. Press Back to return.' });
+    if (!onTv()) return;
+    openOnTv(app ? app.appId : 'io.strem.tv', 'Stremio', {
+      contentTarget: 'stremio:///detail/' + d.kind + '/' + encodeURIComponent(d.show) + '/' + encodeURIComponent(d.id)
+    });
   }
 
   function resumeMedia(item) {
@@ -1089,13 +1133,29 @@
       } catch (e) { /* reload anyway */ }
       location.reload();
     }
-    setInterval(function () { if (!document.hidden) check(); }, 10000);
-    document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
+    setInterval(function () { if (!document.hidden) { check(); loadStremio(); } }, 10000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) { check(); loadStremio(); } });
+  }
+
+  function loadStremio() {
+    var x = new XMLHttpRequest();
+    x.onload = function () {
+      var data;
+      try { data = JSON.parse(x.responseText); } catch (e) { return; }
+      if (stremio && JSON.stringify(stremio) === JSON.stringify(data)) return;
+      stremio = data;
+      buildMedia();
+      layoutPageB();
+      if (current && page === 'b') scrollPageB(current);
+    };
+    x.open('GET', 'stremio.json');
+    x.send();
   }
 
   // ---------- Start ----------
   if (window.TV_APPS) useTvApps(window.TV_APPS);
   if (onTv()) watchTvApps();
+  loadStremio();
   if (/Web0S|webOS/i.test(navigator.userAgent)) document.body.classList.add('on-tv');
   fit();
   window.addEventListener('resize', fit);
