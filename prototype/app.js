@@ -138,6 +138,30 @@
     catch (e) { return null; }
   }
 
+  // Puts back saved ids that are not on screen now and that keep(id) says to keep, each after the id it followed
+  // before, so an app that is reinstalled or unhidden returns to its place.
+  function mergeOrder(saved, shown, keep) {
+    var out = shown.slice();
+    (saved || []).forEach(function (id, i) {
+      if (out.indexOf(id) >= 0 || !keep(id)) return;
+      var j = i - 1;
+      while (j >= 0 && out.indexOf(saved[j]) < 0) j--;
+      out.splice(j < 0 ? 0 : out.indexOf(saved[j]) + 1, 0, id);
+    });
+    return out;
+  }
+
+  // The Apps row keeps the places of pinned apps that are uninstalled; All apps keeps those of every app not shown.
+  function saveDock() {
+    return saveOrder(DOCK_ORDER, mergeOrder(loadOrder(DOCK_ORDER), dockIds(), function (id) { return !C.apps[id]; }));
+  }
+
+  function saveGrid() {
+    var shown = [];
+    each(byId('allAppsGrid').querySelectorAll('.app-icon'), function (t) { shown.push(t.dataset.id); });
+    return saveOrder(GRID_ORDER, mergeOrder(loadOrder(GRID_ORDER), shown, function () { return true; }));
+  }
+
   function saveOrder(name, order) {
     try { localStorage.setItem(name, JSON.stringify(order)); return true; } catch (e) { return false; }
   }
@@ -156,6 +180,7 @@
 
   function hideApp(e) {
     var id = e.dataset.id, hidden = hiddenIds(), grid = byId('allAppsGrid'), focus = null;
+    saveGrid();
     hidden.push(id);
     saveOrder(HIDDEN, hidden);
     // Focus moves to the next app in whichever list the hidden app was focused in.
@@ -166,7 +191,7 @@
       if (memory['ui:1'] === t) memory['ui:1'] = next;
       t.parentNode.removeChild(t);
     });
-    saveOrder(DOCK_ORDER, dockIds());
+    saveDock();
     each(grid.querySelectorAll('.app-icon'), function (t) {
       if (t.dataset.id !== id) return;
       var item = t.parentNode, next = item.nextSibling || item.previousSibling;
@@ -252,7 +277,7 @@
       track.insertBefore(appTile(id, 1, 'dock'), track.querySelector('[data-action="allapps"]'));
       toast(e.dataset.title + ' added to the Home screen');
     }
-    saveOrder(DOCK_ORDER, dockIds());
+    saveDock();
   }
 
   function startMoving(e) {
@@ -284,13 +309,7 @@
     var e = moving, saved;
     e.classList.remove('is-moving');
     moving = null;
-    if (inGrid(e)) {
-      var order = [];
-      each(byId('allAppsGrid').querySelectorAll('.app-icon'), function (t) { order.push(t.dataset.id); });
-      saved = saveOrder(GRID_ORDER, order);
-    } else {
-      saved = saveOrder(DOCK_ORDER, dockIds());
-    }
+    saved = inGrid(e) ? saveGrid() : saveDock();
     toast(saved ? 'Order saved' : 'Could not save the order; it lasts until Ambient Home closes');
   }
 
@@ -850,7 +869,21 @@
     if (t && t !== current && !moving && scope.contains(t)) setFocus(t);
   }
 
+  // Magic Remote: holding the button on an app opens its menu, as holding OK does; the click that follows is dropped.
+  var pointerHold = null, pointerHeld = false;
+
+  function onPointerDown(ev) {
+    var t = targetOf(ev);
+    pointerHeld = false;
+    clearTimeout(pointerHold);
+    if (idleOn || moving || !canArrange(t)) return;
+    pointerHold = setTimeout(function () { pointerHeld = true; setFocus(t); openAppMenu(t); }, 600);
+  }
+
+  function onPointerUp() { clearTimeout(pointerHold); }
+
   function onClick(ev) {
+    if (pointerHeld) { pointerHeld = false; return; }
     if (idleOn) { exitIdle(); return; }
     if (moving) { stopMoving(); return; }
     if (stack.length && !current) { closeOverlay(); return; }
@@ -949,5 +982,8 @@
   });
   stage.addEventListener('mousemove', onPointerMove);
   stage.addEventListener('click', onClick);
+  stage.addEventListener('mousedown', onPointerDown);
+  stage.addEventListener('mouseup', onPointerUp);
+  stage.addEventListener('mouseleave', onPointerUp);
   stage.addEventListener('wheel', onWheel, { passive: true });
 }());
