@@ -323,7 +323,10 @@
   position: relative; width: 1200px; padding: 52px 56px; border-radius: 34px; background: #141821;
   border: 2px solid rgba(255, 255, 255, 0.08); box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6);
   transform: translateY(24px); transition: transform 0.35s var(--ease);
+  /* A card taller than the screen keeps a margin above and below and scrolls inside (app.js: keepInSheet). */
+  box-sizing: border-box; max-height: calc(100% - 112px); overflow-y: auto; scrollbar-width: none;
 }
+.sheet-card::-webkit-scrollbar { display: none; }
 .sheet.is-open .sheet-card { transform: none; }
 .sheet-title { margin: 0 0 26px; font-size: 44px; font-weight: 500; }
 

@@ -546,12 +546,26 @@
     current = e;
     e.classList.add('is-focused');
     memory[memoryKey(+e.dataset.row)] = e;
-    if (scope !== ui) return;
+    if (scope !== ui) { keepInSheet(e); return; }
     showPage(+e.dataset.row >= 3 ? 'b' : 'a');
     if (page === 'a') updateTitle(e);
     else scrollPageB(e);
     keepInView(e);
     parallax(e);
+  }
+
+  // In a card that scrolls, keeps the focused item clear of its top and bottom edges. The first item scrolls the
+  // card to the top, so its title shows too.
+  function keepInSheet(e) {
+    var card = e.closest ? e.closest('.sheet-card') : null;
+    if (!card || card.scrollHeight <= card.clientHeight) return;
+    var y = 0, n = e, top = card.scrollTop, edge = 90;
+    while (n && n !== card) { y += n.offsetTop; n = n.offsetParent; }
+    if (n !== card) y = e.getBoundingClientRect().top - card.getBoundingClientRect().top + top;
+    if (+e.dataset.row === 0) top = 0;
+    else if (y + e.offsetHeight > top + card.clientHeight - edge) top = y + e.offsetHeight - card.clientHeight + edge;
+    else if (y < top + edge) top = y - edge;
+    card.scrollTop = top;
   }
 
   function showPage(p) {
