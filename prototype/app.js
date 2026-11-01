@@ -108,10 +108,10 @@
   }
 
   function buildRows() {
-    var apps = byId('appsTrack'), inputs = byId('inputsTrack'), media = byId('mediaTrack'), home = byId('homeTrack');
+    var apps = byId('appsTrack'), media = byId('mediaTrack'), home = byId('homeTrack');
     savedDockOrder(C.dock).forEach(function (id) { apps.appendChild(appTile(id, 1, 'dock')); });
     if (allAppsShortcut()) apps.appendChild(allAppsTile());
-    C.inputs.forEach(function (inp) { inputs.appendChild(inputTile(inp)); });
+    buildInputs();
     if (C.media.show !== false) C.media.items.forEach(function (item) { media.appendChild(mediaCard(item)); });
     if (C.home.show !== false) C.home.items.forEach(function (item) { home.appendChild(homeTile(item)); });
     byId('mediaChip').textContent = C.media.source + ' · demo';
@@ -278,6 +278,88 @@
       toast(e.dataset.title + ' added to the Home screen');
     }
     saveDock();
+  }
+
+  // ---------- Inputs: hold OK on one to rename or hide it; Settings > Inputs can show all of them ----------
+  // An input with no device name and nothing connected is unused and stays off the screen, as a hidden one does,
+  // until the TV sees something connected to it.
+  var INPUT_NAMES = 'ambientHome.inputNames', HIDDEN_INPUTS = 'ambientHome.hiddenInputs',
+    SHOWN_INPUTS = 'ambientHome.shownInputs', ALL_INPUTS = 'ambientHome.allInputs', menuInput = null;
+
+  function inputNames() {
+    try { return JSON.parse(localStorage.getItem(INPUT_NAMES)) || {}; } catch (e) { return {}; }
+  }
+
+  function showAllInputs() {
+    try { return localStorage.getItem(ALL_INPUTS) === 'on'; } catch (e) { return false; }
+  }
+
+  function inputOff(inp) {
+    if (inp.connected) return false;
+    if ((loadOrder(HIDDEN_INPUTS) || []).indexOf(inp.id) >= 0) return true;
+    return inp.used === false && (loadOrder(SHOWN_INPUTS) || []).indexOf(inp.id) < 0;
+  }
+
+  // The input as shown: with the name given to it here, if any.
+  function namedInput(inp) {
+    var name = inputNames()[inp.id];
+    return name ? copy(inp, { title: name }) : inp;
+  }
+
+  function buildInputs() {
+    var track = byId('inputsTrack'), all = showAllInputs(), focus = null;
+    var focusId = current && current.dataset.action === 'input' ? current.dataset.id : null;
+    track.innerHTML = '';
+    track._x = 0;
+    track.style.transform = '';
+    C.inputs.forEach(function (inp) {
+      var off = inputOff(inp);
+      if (off && !all) return;
+      var t = inputTile(namedInput(inp));
+      if (off) t.classList.add('is-off');
+      track.appendChild(t);
+      if (inp.id === focusId) focus = t;
+    });
+    if (focusId) setFocus(focus || track.firstChild || byId('appsTrack').firstChild);
+  }
+
+  function canInputMenu(e) { return !stack.length && !!e && e.dataset.action === 'input'; }
+
+  function openInputMenu(e) {
+    menuInput = find(C.inputs, e.dataset.id);
+    byId('inputMenuTitle').textContent = e.dataset.title;
+    byId('inputMenuHide').textContent = inputOff(menuInput) ? 'Show input' : 'Hide input';
+    openOverlay(byId('inputMenu'));
+  }
+
+  function toggleInput(inp) {
+    var off = inputOff(inp), id = inp.id;
+    var hidden = (loadOrder(HIDDEN_INPUTS) || []).filter(function (x) { return x !== id; });
+    var shown = (loadOrder(SHOWN_INPUTS) || []).filter(function (x) { return x !== id; });
+    if (off) shown.push(id); else hidden.push(id);
+    saveOrder(HIDDEN_INPUTS, hidden);
+    saveOrder(SHOWN_INPUTS, shown);
+    buildInputs();
+    toast(off ? namedInput(inp).title + ' shown' :
+      namedInput(inp).title + ' hidden until something is connected to it' + (showAllInputs() ? '' : '. Settings > Inputs shows all'));
+  }
+
+  function openRename(inp) {
+    var field = byId('renameField');
+    field.value = inputNames()[inp.id] || '';
+    field.placeholder = inp.title;
+    openOverlay(byId('renameInput'));
+    field.focus();
+  }
+
+  function saveRename() {
+    var field = byId('renameField'), names = inputNames(), name = field.value.replace(/\s+/g, ' ').trim();
+    if (name) names[menuInput.id] = name; else delete names[menuInput.id];
+    try { localStorage.setItem(INPUT_NAMES, JSON.stringify(names)); } catch (e) { /* lasts until Ambient Home closes */ }
+    field.blur();
+    closeOverlay();
+    buildInputs();
+    toast(name ? 'Renamed to ' + name : 'Back to the TV\'s name: ' + menuInput.title);
   }
 
   function startMoving(e) {
@@ -485,7 +567,11 @@
     if (!e) return;
     var action = e.dataset.action, id = e.dataset.id;
     if (action === 'app') launchApp(id);
-    else if (action === 'input') switchInput(find(C.inputs, id));
+    else if (action === 'input') switchInput(namedInput(find(C.inputs, id)));
+    else if (action === 'inputrename') { closeOverlay(); openRename(menuInput); }
+    else if (action === 'inputhide') { closeOverlay(); toggleInput(menuInput); }
+    else if (action === 'renamefield') byId('renameField').focus();
+    else if (action === 'renamesave') saveRename();
     else if (action === 'allapps') setFocus(byId('allAppsGrid').querySelector('.app-icon'));
     else if (action === 'settings') openSettings();
     else if (action === 'forecast') openOverlay(byId('forecast'));
@@ -588,7 +674,11 @@
 
   function selectOption(e) {
     each(e.parentNode.children, function (o) { o.classList.toggle('is-selected', o === e); });
-    if (e.dataset.group === 'allapps') {
+    if (e.dataset.group === 'inputs') {
+      try { localStorage.setItem(ALL_INPUTS, e.dataset.value === 'all' ? 'on' : 'off'); } catch (err) { /* not kept */ }
+      buildInputs();
+      toast(e.dataset.value === 'all' ? 'All inputs shown, hidden ones dimmed' : 'Only inputs in use are shown');
+    } else if (e.dataset.group === 'allapps') {
       setAllAppsShortcut(e.dataset.value === 'on');
     } else if (e.dataset.group === 'home') {
       if (onTv()) setHomeButton(e.dataset.value === 'ours');
@@ -792,6 +882,15 @@
   // ---------- Input: remote keys, Magic Remote pointer and wheel ----------
   function onKey(ev) {
     if (idleOn) { ev.preventDefault(); exitIdle(); return; }
+    // Typing a name: the field gets every key except OK (save), Back and Escape (cancel) and Down (to the buttons).
+    var field = byId('renameField');
+    if (document.activeElement === field) {
+      resetIdle();
+      if (ev.keyCode === 13) { ev.preventDefault(); saveRename(); }
+      else if (ev.keyCode === 27 || ev.keyCode === 461) { ev.preventDefault(); field.blur(); closeOverlay(); }
+      else if (ev.keyCode === 40) { ev.preventDefault(); field.blur(); setFocus(byId('renameInput').querySelector('[data-action="renamesave"]')); }
+      return;
+    }
     resetIdle();
     var code = ev.keyCode;
     // Preview controls: letter keys in a browser; on the LG remote the coloured buttons (red, green, yellow,
@@ -806,7 +905,7 @@
     if (!stack.length && ((code >= 49 && code <= 57) || (code >= 97 && code <= 105))) {
       var digit = String(code >= 97 ? code - 96 : code - 48), inp = null;
       C.inputs.forEach(function (x) { if (x.key === digit) inp = x; });
-      if (inp) switchInput(inp);
+      if (inp) switchInput(namedInput(inp));
       return;
     }
     var key = KEYS[code];
@@ -833,9 +932,12 @@
     }
     if (key === 'ok') {
       // On an app, OK opens it when let go; held for a moment, it opens the app's menu.
-      if (canArrange(current)) {
+      if (canArrange(current) || canInputMenu(current)) {
         var held = current;
-        holdTimer = setTimeout(function () { holdTimer = null; openAppMenu(held); }, 600);
+        holdTimer = setTimeout(function () {
+          holdTimer = null;
+          if (held.dataset.action === 'input') openInputMenu(held); else openAppMenu(held);
+        }, 600);
       } else {
         activate(current);
       }
@@ -876,8 +978,12 @@
     var t = targetOf(ev);
     pointerHeld = false;
     clearTimeout(pointerHold);
-    if (idleOn || moving || !canArrange(t)) return;
-    pointerHold = setTimeout(function () { pointerHeld = true; setFocus(t); openAppMenu(t); }, 600);
+    if (idleOn || moving || !(canArrange(t) || canInputMenu(t))) return;
+    pointerHold = setTimeout(function () {
+      pointerHeld = true;
+      setFocus(t);
+      if (t.dataset.action === 'input') openInputMenu(t); else openAppMenu(t);
+    }, 600);
   }
 
   function onPointerUp() { clearTimeout(pointerHold); }
@@ -940,6 +1046,7 @@
       var n = (/hdmi(\d)/.exec(d.appId) || [])[1] || String(i + 1), ps5 = /ps5|playstation/i.test(d.label);
       var named = !ps5 && d.label && !/^hdmi\s*\d$/i.test(d.label);
       return {
+        used: ps5 || !!named || !!d.connected, connected: !!d.connected,
         id: 'hdmi' + n, appId: d.appId, key: n, title: ps5 ? 'PS5' : named ? d.label : 'HDMI ' + n,
         subtitle: ps5 || named ? 'HDMI ' + n : 'Unnamed device', art: ps5 ? 'ps5' : 'hdmi', accent: ps5 ? '#2563eb' : '#64748b'
       };
@@ -960,6 +1067,7 @@
   assignGridRows(byId('allAppsGrid'));
   showShortcutChoice();
   showHiddenCount();
+  each(document.querySelectorAll('[data-group="inputs"]'), function (o) { o.classList.toggle('is-selected', (o.dataset.value === 'all') === showAllInputs()); });
   each(document.querySelectorAll('[data-group="idle"]'), function (o) { o.classList.toggle('is-selected', +o.dataset.value === idleMinutes); });
   buildLaunchFx();
   setFocus(byId('appsTrack').firstChild);

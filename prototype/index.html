@@ -81,6 +81,25 @@
       </div>
     </div>
 
+    <div id="inputMenu" class="overlay sheet">
+      <div class="sheet-card menu-card">
+        <h2 id="inputMenuTitle" class="sheet-title"></h2>
+        <div class="set-row"><div class="set-btn" data-row="0" data-action="inputrename">Rename</div></div>
+        <div class="set-row"><div id="inputMenuHide" class="set-btn" data-row="1" data-action="inputhide">Hide input</div></div>
+        <div class="set-footer"><div class="set-btn" data-row="2" data-action="close">Cancel</div></div>
+      </div>
+    </div>
+
+    <div id="renameInput" class="overlay sheet">
+      <div class="sheet-card menu-card">
+        <h2 class="sheet-title">Rename input</h2>
+        <input id="renameField" class="rename-field" type="text" maxlength="24" autocomplete="off" data-row="0" data-action="renamefield">
+        <p class="set-hint">Leave it empty to use the TV's own name.</p>
+        <div class="set-row"><div class="set-btn" data-row="1" data-action="renamesave">Save</div></div>
+        <div class="set-footer"><div class="set-btn" data-row="2" data-action="close">Cancel</div></div>
+      </div>
+    </div>
+
     <div id="settings" class="overlay sheet">
       <div class="sheet-card settings-card">
         <h2 class="sheet-title">Home settings</h2>
@@ -105,10 +124,15 @@
         </div>
         <div class="set-label">Apps</div>
         <div class="set-item" data-row="4" data-action="hiddenapps"><span>Hidden apps</span><span id="hiddenCount" class="set-value">None</span></div>
+        <div class="set-label">Inputs</div>
+        <div class="seg">
+          <div class="seg-option is-selected" data-row="5" data-action="seg" data-group="inputs" data-value="used">In use only</div>
+          <div class="seg-option" data-row="5" data-action="seg" data-group="inputs" data-value="all">All inputs</div>
+        </div>
         <div class="set-label">Weather</div>
-        <div class="set-item" data-row="5" data-action="weatherloc"><span>Location</span><span class="set-value">Not set · demo weather</span></div>
-        <p class="set-hint">Remote shortcuts: hold OK on an app to move it, hide it, or add it to or remove it from the Home screen. Hold Back to open LG Home once. Press Home three times to switch to LG Home until you turn this screen back on.</p>
-        <div class="set-footer"><div class="set-btn" data-row="6" data-action="close">Done</div></div>
+        <div class="set-item" data-row="6" data-action="weatherloc"><span>Location</span><span class="set-value">Not set · demo weather</span></div>
+        <p class="set-hint">Remote shortcuts: hold OK on an app to move it, hide it, or add it to or remove it from the Home screen, or on an input to rename or hide it. Hold Back to open LG Home once. Press Home three times to switch to LG Home until you turn this screen back on.</p>
+        <div class="set-footer"><div class="set-btn" data-row="7" data-action="close">Done</div></div>
       </div>
     </div>
 

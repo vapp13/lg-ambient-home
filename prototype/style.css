@@ -334,6 +334,13 @@
 
 .settings-card { width: 1040px; }
 .menu-card { width: 620px; }
+.rename-field {
+  display: block; width: 100%; box-sizing: border-box; padding: 18px 24px; border-radius: 18px; font: inherit; font-size: 32px;
+  color: #fff; background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.18); outline: none;
+}
+.rename-field.is-focused, .rename-field:focus { border-color: #fff; }
+/* Hidden or unused, shown only because Settings > Inputs is set to All inputs. */
+.input-tile.is-off { opacity: 0.45; }
 .menu-card .set-btn { flex: 1; text-align: center; margin-right: 0; }
 #allApps .sheet-card { width: 1640px; }
 .set-label { margin: 26px 0 14px; font-size: 19px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--muted); }
