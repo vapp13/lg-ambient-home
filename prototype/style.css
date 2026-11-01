@@ -363,6 +363,14 @@
   background: rgba(255, 255, 255, 0.08); font-size: 26px; transition: transform 0.2s var(--ease);
 }
 .set-value { color: var(--muted); }
+.set-item-gap { margin-top: 14px; }
+/* Settings > Running apps */
+.running-card { width: 940px; }
+.running-memory { margin: 0 0 22px; }
+.running-list .set-item { margin-bottom: 12px; }
+.running-item em { margin-left: 12px; font-style: normal; font-size: 20px; color: var(--muted); }
+.running-item.is-self { opacity: 0.5; }
+.running-card .set-footer .set-btn + .set-btn { margin-left: 16px; }
 .seg-option::after, .set-btn::after, .set-item::after { top: -7px; right: -7px; bottom: -7px; left: -7px; border-radius: 22px; }
 .seg-option.is-focused, .set-btn.is-focused { transform: scale(1.05); }
 .set-item.is-focused { transform: scale(1.02); }

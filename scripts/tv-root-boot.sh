@@ -21,7 +21,9 @@ for d in $A/applications/com.local.ambienthome $A/services/com.local.ambienthome
     [ "$(head -c 4 "$f" | tail -c 3)" = ELF ] && chmod 755 "$f"
   done
 done
-for s in $STATE $A/services/com.local.nativehome.service/state; do
+# Ambient Home's service leaves requests for tv-root-live.js (Settings > Running apps) in its own state folder.
+[ -d $A/services/com.local.ambienthome.service ] && mkdir -p $A/services/com.local.ambienthome.service/state
+for s in $STATE $A/services/com.local.nativehome.service/state $A/services/com.local.ambienthome.service/state; do
   [ -d "$s" ] || continue
   chmod 770 "$s"
   chgrp -R 5000 "$s"

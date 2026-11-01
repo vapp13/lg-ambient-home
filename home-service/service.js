@@ -15,6 +15,18 @@ var homeControl=require('./home-control')(fs,state);
  });
 });
 
+// Settings > Running apps on a rooted TV: tv-root-live.js lists and closes apps as root. This only passes Ambient
+// Home's requests to it, as files in this service's state folder, which the startup script creates.
+var requests=__dirname+'/state';
+service.register('appRequest',function(m){
+ if(!caller(m)){denied(m);return;}
+ var p=m.payload||{},ok=p.action==='refresh'||p.action==='closeBackground'||(p.action==='close'&&typeof p.id==='string'&&/^[\w.-]+$/.test(p.id));
+ if(!ok){m.respond({returnValue:false,errorText:'bad-request'});return;}
+ var file=requests+'/request-'+Date.now()+'-'+Math.random().toString(36).slice(2)+'.json';
+ try{fs.writeFileSync(file+'.tmp',JSON.stringify({action:p.action,id:p.id}),{mode:432});fs.renameSync(file+'.tmp',file);m.respond({returnValue:true});}
+ catch(e){m.respond({returnValue:false,errorText:e.code==='ENOENT'?'not-rooted':String(e.code||e)});}
+});
+
 // Answers at once whether Helper is installed, stopped for safety (Home pressed three times) or running,
 // so the settings sheet need not wait for homeStatus to time out. Same checks as Helper's own status method.
 function exists(p){try{fs.statSync(p);return true;}catch(e){return e.code!=='ENOENT';}}

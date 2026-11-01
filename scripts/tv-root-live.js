@@ -2,8 +2,8 @@
 // Rooted TVs only. Keeps Ambient Home's list of the TV's apps and inputs (tv-apps.js, tv-apps.json and tv-icons/ in
 // its folder) and Home Helper's list of apps up to date, so apps installed or removed on the TV and devices plugged
 // in show up by themselves: no scripts/tv-sync-apps.mjs from the computer. It also keeps Stremio's Continue watching
-// (tv-root-stremio.js). tv-root-boot.sh starts it at boot, as root; it reads the TV every 10 seconds with luna-send
-// and writes only when something changed.
+// (tv-root-stremio.js), and lists and closes running apps for Settings > Running apps. tv-root-boot.sh starts it
+// at boot, as root; it reads the TV every 10 seconds with luna-send and writes only when something changed.
 'use strict';
 const fs = require('fs');
 const { execFile } = require('child_process');
@@ -32,9 +32,9 @@ function alreadyRunning() {
 }
 
 // luna-send prints nothing when its output is not a terminal, so run it under script, which gives it one.
-function luna(uri) {
+function luna(uri, params) {
   return new Promise((resolve) => {
-    execFile('script', ['-q', '-c', 'luna-send -n 1 -w 8000 ' + uri + ' {}', '/dev/null'],
+    execFile('script', ['-q', '-c', 'luna-send -n 1 -w 8000 ' + uri + " '" + JSON.stringify(params || {}) + "'", '/dev/null'],
       { maxBuffer: 16 << 20, timeout: 20000 }, (err, out) => {
         const text = String(out || '').replace(/\r/g, '');
         try { resolve(JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1))); } catch (e) { resolve(null); }
@@ -74,6 +74,9 @@ async function tick() {
   ]);
   if (!points || !points.launchPoints || !inputs || !inputs.devices) { log('the TV did not answer'); return; }
   const apps = [];
+  titles = {};
+  points.launchPoints.forEach((p) => { titles[p.id] = p.title; });
+  inputs.devices.forEach((d) => { if (d.appId) titles[d.appId] = d.label || d.id; });
   points.launchPoints.filter((p) => !p.hidden).forEach((p) => {
     if (copyIcon(p)) apps.push({ id: p.id, title: p.title, icon: 'tv-icons/' + iconName(p.id), color: p.iconColor || p.bgColor || '' });
   });
@@ -95,6 +98,78 @@ async function tick() {
   }
 }
 
+// ---------- Running apps (Settings > Running apps) ----------
+// Ambient Home's service leaves requests in its state folder; this answers them as root and keeps running.json in
+// Ambient Home's folder: each running app with the memory it uses, and the TV's free memory.
+const REQUESTS = '/media/developer/apps/usr/palm/services/com.local.ambienthome.service/state';
+let titles = {}, handling = false;
+// Running apps without a launch point of their own.
+const SYSTEM_TITLES = { 'com.webos.app.home': 'LG Home', 'com.webos.app.voice': 'Voice', 'com.webos.app.livetv': 'Live TV' };
+
+function memoryKb(pid) {
+  try { return +(/VmRSS:\s+(\d+)/.exec(fs.readFileSync('/proc/' + pid + '/status', 'utf8')) || [0, 0])[1]; } catch (e) { return 0; }
+}
+
+async function running() {
+  const [run, front] = await Promise.all([
+    luna('luna://com.webos.applicationManager/running'),
+    luna('luna://com.webos.applicationManager/getForegroundAppInfo')
+  ]);
+  if (!run || !run.running) return null;
+  return run.running.map((a) => {
+    const pids = [a.processid, a.webprocessid].filter((p, i, all) => p && all.indexOf(p) === i);
+    return {
+      id: a.id, title: titles[a.id] || SYSTEM_TITLES[a.id] || a.id, kb: pids.reduce((sum, p) => sum + memoryKb(p), 0),
+      onScreen: !!front && front.appId === a.id,
+      // Left alone by Close all background apps: Ambient Home, LG's own home and overlays such as voice.
+      system: a.id === 'com.local.ambienthome' || a.defaultWindowType !== 'card'
+    };
+  });
+}
+
+async function writeRunning() {
+  if (!fs.existsSync(APP)) return;
+  const apps = await running();
+  if (!apps) return;
+  const mem = fs.readFileSync('/proc/meminfo', 'utf8');
+  const kb = (name) => +((new RegExp(name + ':\\s+(\\d+)').exec(mem) || [0, 0])[1]);
+  apps.sort((a, b) => b.kb - a.kb);
+  writeIfChanged(APP + '/running.json', JSON.stringify({ time: Date.now(), totalKb: kb('MemTotal'),
+    availableKb: kb('MemAvailable'), apps: apps }, null, 1) + '\n', null, 0o644);
+}
+
+function closeApp(id) { return luna('luna://com.webos.applicationManager/closeByAppId', { id: id }); }
+
+// Requests: refresh, close (one app) or closeBackground. Checked every second.
+async function handleRequests() {
+  if (handling) return;
+  handling = true;
+  try {
+    let files = [];
+    try { files = fs.readdirSync(REQUESTS).filter((f) => /^request-[\w.-]+\.json$/.test(f)).sort(); } catch (e) { return; }
+    if (!files.length) return;
+    for (const f of files) {
+      let req = {};
+      try { req = JSON.parse(fs.readFileSync(REQUESTS + '/' + f, 'utf8')); } catch (e) { /* half written: dropped */ }
+      try { fs.unlinkSync(REQUESTS + '/' + f); } catch (e) { /* gone already */ }
+      if (req.action === 'close' && /^[\w.-]+$/.test(req.id || '') && req.id !== 'com.local.ambienthome') {
+        await closeApp(req.id);
+        log('closed ' + req.id);
+      } else if (req.action === 'closeBackground') {
+        const apps = (await running()) || [];
+        for (const a of apps) if (!a.system && !a.onScreen) await closeApp(a.id);
+        log('closed background apps');
+      }
+    }
+    await new Promise((r) => setTimeout(r, 800));
+    await writeRunning();
+  } catch (e) {
+    log(String(e && e.stack || e));
+  } finally {
+    handling = false;
+  }
+}
+
 // Stremio's Continue watching (tv-root-stremio.js), once a minute.
 let rounds = 0;
 function stremio() {
@@ -105,5 +180,6 @@ function stremio() {
 if (alreadyRunning()) process.exit(0);
 fs.writeFileSync(PID, String(process.pid));
 (function loop() {
-  tick().then(stremio).catch((e) => log(String(e && e.stack || e))).then(() => setTimeout(loop, EVERY));
+  tick().then(stremio).then(writeRunning).catch((e) => log(String(e && e.stack || e))).then(() => setTimeout(loop, EVERY));
 })();
+setInterval(handleRequests, 1000);

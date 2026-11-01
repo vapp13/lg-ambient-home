@@ -124,15 +124,16 @@
         </div>
         <div class="set-label">Apps</div>
         <div class="set-item" data-row="4" data-action="hiddenapps"><span>Hidden apps</span><span id="hiddenCount" class="set-value">None</span></div>
+        <div class="set-item set-item-gap" data-row="5" data-action="runningapps"><span>Running apps</span><span class="set-value">See and close</span></div>
         <div class="set-label">Inputs</div>
         <div class="seg">
-          <div class="seg-option is-selected" data-row="5" data-action="seg" data-group="inputs" data-value="used">In use only</div>
-          <div class="seg-option" data-row="5" data-action="seg" data-group="inputs" data-value="all">All inputs</div>
+          <div class="seg-option is-selected" data-row="6" data-action="seg" data-group="inputs" data-value="used">In use only</div>
+          <div class="seg-option" data-row="6" data-action="seg" data-group="inputs" data-value="all">All inputs</div>
         </div>
         <div class="set-label">Weather</div>
-        <div class="set-item" data-row="6" data-action="weatherloc"><span>Location</span><span class="set-value">Not set · demo weather</span></div>
+        <div class="set-item" data-row="7" data-action="weatherloc"><span>Location</span><span class="set-value">Not set · demo weather</span></div>
         <p class="set-hint">Remote shortcuts: hold OK on an app to move it, hide it, or add it to or remove it from the Home screen, or on an input to rename or hide it. Hold Back to open LG Home once. Press Home three times to switch to LG Home until you turn this screen back on.</p>
-        <div class="set-footer"><div class="set-btn" data-row="7" data-action="close">Done</div></div>
+        <div class="set-footer"><div class="set-btn" data-row="8" data-action="close">Done</div></div>
       </div>
     </div>
 
@@ -141,6 +142,18 @@
         <h2 class="sheet-title">Hidden apps</h2>
         <p class="set-hint">Press OK on an app to show it in All apps again.</p>
         <div id="hiddenGrid" class="grid"></div>
+      </div>
+    </div>
+
+    <div id="runningApps" class="overlay sheet">
+      <div class="sheet-card running-card">
+        <h2 class="sheet-title">Running apps</h2>
+        <p id="runningMemory" class="set-hint running-memory"></p>
+        <div id="runningList" class="running-list"></div>
+        <div class="set-footer">
+          <div class="set-btn" data-row="999" data-action="closebackground">Close all background apps</div>
+          <div class="set-btn" data-row="999" data-action="close">Done</div>
+        </div>
       </div>
     </div>
 

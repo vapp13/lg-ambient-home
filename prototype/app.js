@@ -242,6 +242,80 @@
     else closeOverlay();
   }
 
+  // ---------- Settings > Running apps (rooted TVs) ----------
+  // LG lets only root list or close apps: tv-root-live.js does both, keeps running.json up to date, and takes requests
+  // from this app's service (appRequest).
+  var runningTimer = null, runningFirst = false;
+
+  function appRequest(action, id, done) {
+    callLuna('luna://com.local.ambienthome.service/appRequest', { action: action, id: id }, function (r) {
+      if (r.returnValue === false) toast(r.errorText === 'not-rooted' ? 'Running apps needs a rooted TV' : 'Could not ask the TV: ' + (r.errorText || 'no answer'));
+      else if (done) done();
+    });
+  }
+
+  function openRunning() {
+    if (!onTv()) { toast('Running apps works on the TV'); return; }
+    openOverlay(byId('runningApps'));
+    runningFirst = true;
+    showRunning(null);
+    var since = Date.now();
+    appRequest('refresh', null, function () { pollRunning(since); });
+  }
+
+  // Reads running.json until it is newer than since (a request has been answered), then shows it.
+  function pollRunning(since, tries) {
+    clearTimeout(runningTimer);
+    tries = tries || 0;
+    var x = new XMLHttpRequest();
+    x.onload = x.onerror = function () {
+      var data = null;
+      try { data = JSON.parse(x.responseText); } catch (e) { /* not there yet */ }
+      if (data && data.time >= since) showRunning(data);
+      else if (tries < 20) runningTimer = setTimeout(function () { pollRunning(since, tries + 1); }, 400);
+      else if (data) showRunning(data);
+      else byId('runningMemory').textContent = 'The TV did not answer. Is Ambient Home installed with its startup script?';
+    };
+    x.open('GET', 'running.json');
+    x.send();
+  }
+
+  function sizeOf(kb) { return kb >= 1048576 ? (kb / 1048576).toFixed(1) + ' GB' : Math.round(kb / 1024) + ' MB'; }
+
+  function showRunning(data) {
+    var ov = byId('runningApps'), list = byId('runningList'), focus = null;
+    var focusId = current && current.dataset.action === 'closeapp' ? current.dataset.id : null;
+    if (!ov.classList.contains('is-open')) return;
+    list.innerHTML = '';
+    if (!data) { byId('runningMemory').textContent = 'Checking what is running…'; return; }
+    byId('runningMemory').textContent = sizeOf(data.availableKb) + ' of ' + sizeOf(data.totalKb) +
+      ' memory free. Press OK on an app to close it.';
+    data.apps.forEach(function (a, i) {
+      var self = a.id === 'com.local.ambienthome';
+      var row = el('div', 'set-item running-item' + (self ? ' is-self' : ''), '<span>' + esc(a.title) +
+        (self ? ' <em>this screen</em>' : a.onScreen ? ' <em>on screen</em>' : a.system ? ' <em>system</em>' : '') +
+        '</span><span class="set-value">' + (a.kb ? sizeOf(a.kb) : '') + '</span>');
+      if (!self) setData(row, { row: i, action: 'closeapp', id: a.id, title: a.title });
+      list.appendChild(row);
+      if (a.id === focusId) focus = row;
+    });
+    // The list takes focus when it first arrives, and keeps it on the same app (or the first) as it changes.
+    if (scope === ov && (runningFirst || !current || !ov.contains(current) || current.dataset.action === 'closeapp')) {
+      setFocus(focus || list.querySelector('[data-row]') || ov.querySelector('[data-action="closebackground"]'));
+    }
+    runningFirst = false;
+  }
+
+  function closeRunning(e) {
+    var since = Date.now();
+    appRequest('close', e.dataset.id, function () { toast('Closing ' + e.dataset.title + '…'); pollRunning(since); });
+  }
+
+  function closeBackground() {
+    var since = Date.now();
+    appRequest('closeBackground', null, function () { toast('Closing background apps…'); pollRunning(since); });
+  }
+
   function showHiddenCount() {
     var n = hiddenIds().length;
     byId('hiddenCount').textContent = n ? n + (n === 1 ? ' app' : ' apps') : 'None';
@@ -630,6 +704,9 @@
     else if (action === 'apppin') { closeOverlay(); togglePin(menuApp); }
     else if (action === 'apphide') { closeOverlay(); hideApp(menuApp); }
     else if (action === 'hiddenapps') openHiddenApps();
+    else if (action === 'runningapps') openRunning();
+    else if (action === 'closeapp') closeRunning(e);
+    else if (action === 'closebackground') closeBackground();
     else if (action === 'unhide') unhideApp(e);
     else if (action === 'close') closeOverlay();
   }
