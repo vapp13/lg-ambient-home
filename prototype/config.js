@@ -18,7 +18,9 @@ window.HOME_CONFIG = {
     demo: { temperature: 14, high: 17, low: 9, condition: 'partly', sunrise: '06:30', sunset: '18:30' }
   },
 
-  // Apps in the dock, left to right. An "All apps" icon is added at the end.
+  // Apps in the dock, left to right. An "All apps" icon is added at the end unless allAppsShortcut is false;
+  // Settings can switch it, and All apps is always one press of Down below Inputs.
+  allAppsShortcut: true,
   dock: ['iptv', 'netflix', 'youtube', 'prime', 'disney', 'apple'],
 
   // appId: the app's id on the TV, used to open it there (apps without one can only be previewed).

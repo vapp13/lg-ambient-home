@@ -63,10 +63,12 @@
 #appsTrack > * + * { margin-left: 36px; }
 #inputsLabel { top: 852px; }
 #inputsRow { top: 884px; height: 130px; }
-#mediaLabel { top: 344px; }
-#mediaRow { top: 380px; height: 260px; }
-#homeLabel { top: 688px; }
-#homeRow { top: 724px; height: 180px; }
+/* The second page's sections stack from the top of this window (app.js: layoutPageB) and scroll inside it. */
+.page-clip { position: absolute; left: 0; right: 0; top: 310px; bottom: 60px; overflow: hidden; }
+.page-content { position: absolute; left: 0; right: 0; top: 0; transition: transform 0.35s var(--ease); }
+#mediaRow { height: 260px; }
+#homeRow { height: 180px; }
+.page-grid { position: absolute; left: var(--edge); right: var(--edge); margin: 0; padding-top: 14px; }
 
 .more-hint {
   position: absolute; left: 0; right: 0; top: 1030px; text-align: center;
@@ -326,9 +328,13 @@
 .grid .icon-glass, .grid .icon-brand { border-radius: 28px; }
 .grid .icon-lift::after { border-radius: 34px; }
 .grid .app-icon.is-focused .icon-lift { transform: translateY(-6px) scale(1.1); }
+.grid .app-icon.is-moving .icon-lift { transform: translateY(-16px) scale(1.14); }
+.grid .app-icon.is-moving::before { display: none; }
 .grid-name { margin-top: 16px; text-align: center; font-size: 20px; color: var(--fg-dim); }
 
 .settings-card { width: 1040px; }
+.menu-card { width: 620px; }
+.menu-card .set-btn { flex: 1; text-align: center; margin-right: 0; }
 #allApps .sheet-card { width: 1640px; }
 .set-label { margin: 26px 0 14px; font-size: 19px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--muted); }
 .seg, .set-row { display: flex; }

@@ -48,10 +48,16 @@
       </section>
 
       <section id="pageB" class="page page-b">
-        <div id="mediaLabel" class="row-label">Continue watching<span id="mediaChip" class="chip"></span></div>
-        <div id="mediaRow" class="row"><div id="mediaTrack" class="track"></div></div>
-        <div id="homeLabel" class="row-label">Home<span id="homeChip" class="chip"></span></div>
-        <div id="homeRow" class="row"><div id="homeTrack" class="track"></div></div>
+        <div id="pageBClip" class="page-clip">
+          <div id="pageBContent" class="page-content">
+            <div id="mediaLabel" class="row-label">Continue watching<span id="mediaChip" class="chip"></span></div>
+            <div id="mediaRow" class="row"><div id="mediaTrack" class="track"></div></div>
+            <div id="homeLabel" class="row-label">Home<span id="homeChip" class="chip"></span></div>
+            <div id="homeRow" class="row"><div id="homeTrack" class="track"></div></div>
+            <div id="gridLabel" class="row-label">All apps</div>
+            <div id="allAppsGrid" class="grid page-grid"></div>
+          </div>
+        </div>
         <div class="more-hint">&uarr;&nbsp; Apps &middot; Inputs</div>
       </section>
     </div>
@@ -65,10 +71,13 @@
       <div id="launchNote" class="launch-note"></div>
     </div>
 
-    <div id="allApps" class="overlay sheet">
-      <div class="sheet-card">
-        <h2 class="sheet-title">All apps</h2>
-        <div id="allAppsGrid" class="grid"></div>
+    <div id="appMenu" class="overlay sheet">
+      <div class="sheet-card menu-card">
+        <h2 id="appMenuTitle" class="sheet-title"></h2>
+        <div class="set-row"><div class="set-btn" data-row="0" data-action="appmove">Move</div></div>
+        <div class="set-row"><div id="appMenuPin" class="set-btn" data-row="1" data-action="apppin">Add to Home screen</div></div>
+        <div class="set-row"><div class="set-btn" data-row="2" data-action="apphide">Hide app</div></div>
+        <div class="set-footer"><div class="set-btn" data-row="3" data-action="close">Cancel</div></div>
       </div>
     </div>
 
@@ -89,10 +98,25 @@
           <div class="seg-option" data-row="2" data-action="seg" data-group="idle" data-value="10">10 min</div>
           <div class="seg-option" data-row="2" data-action="seg" data-group="idle" data-value="0">Off</div>
         </div>
+        <div class="set-label">All apps shortcut on the Home screen</div>
+        <div class="seg">
+          <div class="seg-option is-selected" data-row="3" data-action="seg" data-group="allapps" data-value="on">Show</div>
+          <div class="seg-option" data-row="3" data-action="seg" data-group="allapps" data-value="off">Hide</div>
+        </div>
+        <div class="set-label">Apps</div>
+        <div class="set-item" data-row="4" data-action="hiddenapps"><span>Hidden apps</span><span id="hiddenCount" class="set-value">None</span></div>
         <div class="set-label">Weather</div>
-        <div class="set-item" data-row="3" data-action="weatherloc"><span>Location</span><span class="set-value">Not set · demo weather</span></div>
-        <p class="set-hint">Remote shortcuts: hold OK on an app to move it along the Apps row. Hold Back to open LG Home once. Press Home three times to switch to LG Home until you turn this screen back on.</p>
-        <div class="set-footer"><div class="set-btn" data-row="4" data-action="close">Done</div></div>
+        <div class="set-item" data-row="5" data-action="weatherloc"><span>Location</span><span class="set-value">Not set · demo weather</span></div>
+        <p class="set-hint">Remote shortcuts: hold OK on an app to move it, hide it, or add it to or remove it from the Home screen. Hold Back to open LG Home once. Press Home three times to switch to LG Home until you turn this screen back on.</p>
+        <div class="set-footer"><div class="set-btn" data-row="6" data-action="close">Done</div></div>
+      </div>
+    </div>
+
+    <div id="hiddenApps" class="overlay sheet">
+      <div class="sheet-card">
+        <h2 class="sheet-title">Hidden apps</h2>
+        <p class="set-hint">Press OK on an app to show it in All apps again.</p>
+        <div id="hiddenGrid" class="grid"></div>
       </div>
     </div>
 

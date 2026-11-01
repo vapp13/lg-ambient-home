@@ -104,7 +104,7 @@
   function buildRows() {
     var apps = byId('appsTrack'), inputs = byId('inputsTrack'), media = byId('mediaTrack'), home = byId('homeTrack');
     savedDockOrder(C.dock).forEach(function (id) { apps.appendChild(appTile(id, 1, 'dock')); });
-    apps.appendChild(allAppsTile());
+    if (allAppsShortcut()) apps.appendChild(allAppsTile());
     C.inputs.forEach(function (inp) { inputs.appendChild(inputTile(inp)); });
     if (C.media.show !== false) C.media.items.forEach(function (item) { media.appendChild(mediaCard(item)); });
     if (C.home.show !== false) C.home.items.forEach(function (item) { home.appendChild(homeTile(item)); });
@@ -116,51 +116,182 @@
       if (C[r[0]].show === false) { byId(r[0] + 'Label').style.display = byId(r[0] + 'Row').style.display = 'none'; }
       else below.push(r[1]);
     });
-    var hint = byId('pageA').querySelector('.more-hint');
-    if (below.length) hint.innerHTML = '&darr;&nbsp; ' + below.join(' &middot; ');
-    else hint.style.display = 'none';
+    below.push('All apps');
+    byId('pageA').querySelector('.more-hint').innerHTML = '&darr;&nbsp; ' + below.join(' &middot; ');
     byId('settingsButton').innerHTML = ART.gear();
   }
 
-  // ---------- Arranging the Apps row: hold OK on an app, move it with Left and Right, OK or Back to finish ----------
-  // The order is kept in this app's storage on the TV; apps added later go at the end.
-  var DOCK_ORDER = 'ambientHome.dockOrder';
+  // ---------- Arranging apps: hold OK on an app for its menu ----------
+  // Move picks the app up: Left and Right move it (Up and Down too in All apps), OK or Back puts it down.
+  // Add to / Remove from Home screen pins it to the end of the Apps row or takes it off. Both orders are kept in
+  // this app's storage on the TV; apps installed later go at the end of All apps.
+  var DOCK_ORDER = 'ambientHome.dockOrder', GRID_ORDER = 'ambientHome.gridOrder', DOCK_MAX = 8, menuApp = null;
 
-  function savedDockOrder(dock) {
-    var saved = null;
-    try { saved = JSON.parse(localStorage.getItem(DOCK_ORDER)); } catch (e) { /* no saved order */ }
-    if (!(saved instanceof Array)) return dock;
-    var order = saved.filter(function (id) { return dock.indexOf(id) >= 0; });
-    return order.concat(dock.filter(function (id) { return order.indexOf(id) < 0; }));
+  function loadOrder(name) {
+    try { var saved = JSON.parse(localStorage.getItem(name)); return saved instanceof Array ? saved : null; }
+    catch (e) { return null; }
   }
 
-  function canArrange(e) { return !stack.length && !!e && e.dataset.action === 'app' && e.parentNode === byId('appsTrack'); }
+  function saveOrder(name, order) {
+    try { localStorage.setItem(name, JSON.stringify(order)); return true; } catch (e) { return false; }
+  }
+
+  function savedDockOrder(dock) {
+    var saved = loadOrder(DOCK_ORDER);
+    return (saved || dock).filter(function (id) { return C.apps[id] && !isHidden(id); });
+  }
+
+  // ---------- Hidden apps: Hide app in an app's menu; Settings > Hidden apps brings them back ----------
+  // Hiding only leaves Ambient Home's lists: the app stays installed and in LG's own launcher.
+  var HIDDEN = 'ambientHome.hiddenApps';
+
+  function hiddenIds() { return (loadOrder(HIDDEN) || []).filter(function (id) { return C.apps[id]; }); }
+  function isHidden(id) { return hiddenIds().indexOf(id) >= 0; }
+
+  function hideApp(e) {
+    var id = e.dataset.id, hidden = hiddenIds(), grid = byId('allAppsGrid'), focus = null;
+    hidden.push(id);
+    saveOrder(HIDDEN, hidden);
+    // Focus moves to the next app in whichever list the hidden app was focused in.
+    each(byId('appsTrack').querySelectorAll('[data-action="app"]'), function (t) {
+      if (t.dataset.id !== id) return;
+      var next = t.nextSibling || t.previousSibling;
+      if (current === t) focus = next;
+      if (memory['ui:1'] === t) memory['ui:1'] = next;
+      t.parentNode.removeChild(t);
+    });
+    saveOrder(DOCK_ORDER, dockIds());
+    each(grid.querySelectorAll('.app-icon'), function (t) {
+      if (t.dataset.id !== id) return;
+      var item = t.parentNode, next = item.nextSibling || item.previousSibling;
+      if (current === t) focus = next && next.querySelector('.app-icon');
+      grid.removeChild(item);
+    });
+    assignGridRows(grid);
+    if (!current || !document.body.contains(current)) {
+      setFocus(focus || memory['ui:1'] || byId('appsTrack').firstChild || byId('inputsTrack').firstChild);
+    }
+    showHiddenCount();
+    toast(e.dataset.title + ' hidden. Settings > Hidden apps brings it back');
+  }
+
+  function openHiddenApps() {
+    var list = byId('hiddenGrid'), ids = hiddenIds();
+    if (!ids.length) { toast('No hidden apps'); return; }
+    list.innerHTML = '';
+    ids.forEach(function (id) {
+      var app = C.apps[id], item = el('div', 'grid-item');
+      item.appendChild(iconTile(app, { row: 0, action: 'unhide', id: id, title: app.title }, 'grid'));
+      item.appendChild(el('div', 'grid-name', esc(app.title)));
+      list.appendChild(item);
+    });
+    openOverlay(byId('hiddenApps'));
+    assignGridRows(list, 0);
+  }
+
+  function unhideApp(e) {
+    var id = e.dataset.id, list = byId('hiddenGrid'), item = e.parentNode, next = item.nextSibling || item.previousSibling;
+    saveOrder(HIDDEN, hiddenIds().filter(function (h) { return h !== id; }));
+    list.removeChild(item);
+    byId('allAppsGrid').innerHTML = '';
+    buildAllApps();
+    assignGridRows(byId('allAppsGrid'));
+    showHiddenCount();
+    toast(e.dataset.title + ' is back in All apps');
+    if (next) { assignGridRows(list, 0); setFocus(next.querySelector('.app-icon')); }
+    else closeOverlay();
+  }
+
+  function showHiddenCount() {
+    var n = hiddenIds().length;
+    byId('hiddenCount').textContent = n ? n + (n === 1 ? ' app' : ' apps') : 'None';
+  }
+
+  function savedGridOrder(ids) {
+    var saved = (loadOrder(GRID_ORDER) || []).filter(function (id) { return ids.indexOf(id) >= 0; });
+    return saved.concat(ids.filter(function (id) { return saved.indexOf(id) < 0; }));
+  }
+
+  function dockIds() {
+    var ids = [];
+    each(byId('appsTrack').children, function (t) { if (t.dataset.action === 'app') ids.push(t.dataset.id); });
+    return ids;
+  }
+
+  function inGrid(e) { return e.parentNode.classList.contains('grid-item'); }
+
+  function canArrange(e) { return !stack.length && !!e && e.dataset.action === 'app'; }
+
+  function openAppMenu(e) {
+    var pinned = dockIds().indexOf(e.dataset.id) >= 0;
+    menuApp = e;
+    byId('appMenuTitle').textContent = e.dataset.title;
+    byId('appMenuPin').textContent = pinned ? 'Remove from Home screen' : 'Add to Home screen';
+    openOverlay(byId('appMenu'));
+  }
+
+  function togglePin(e) {
+    var track = byId('appsTrack'), id = e.dataset.id, tile = null;
+    each(track.children, function (t) { if (t.dataset.action === 'app' && t.dataset.id === id) tile = t; });
+    if (tile) {
+      var next = tile.nextSibling || tile.previousSibling;
+      track.removeChild(tile);
+      if (current === tile) setFocus(next);
+      if (memory['ui:1'] === tile) memory['ui:1'] = next;
+      toast(e.dataset.title + ' removed from the Home screen');
+    } else if (dockIds().length >= DOCK_MAX) {
+      toast('The Apps row is full: remove an app from it first');
+      return;
+    } else {
+      track.insertBefore(appTile(id, 1, 'dock'), track.querySelector('[data-action="allapps"]'));
+      toast(e.dataset.title + ' added to the Home screen');
+    }
+    saveOrder(DOCK_ORDER, dockIds());
+  }
 
   function startMoving(e) {
     moving = e;
     e.classList.add('is-moving');
-    toast('Move ' + e.dataset.title + ' with ◀ ▶, then press OK');
+    toast('Move ' + e.dataset.title + ' with the arrows, then press OK');
   }
 
   function shiftMoving(dir) {
-    var other = dir === 'left' ? moving.previousSibling : moving.nextSibling;
-    if (!other || other.dataset.action !== 'app') return;
-    moving.parentNode.insertBefore(moving, dir === 'left' ? other : other.nextSibling);
+    if (inGrid(moving)) {
+      var items = Array.prototype.slice.call(byId('allAppsGrid').children), item = moving.parentNode;
+      var i = items.indexOf(item), columns = 0;
+      while (columns < items.length && items[columns].offsetTop === items[0].offsetTop) columns++;
+      var j = i + ({ left: -1, right: 1, up: -columns, down: columns })[dir];
+      if (j < 0 || j >= items.length || j === i) return;
+      item.parentNode.insertBefore(item, j > i ? items[j].nextSibling : items[j]);
+      assignGridRows(byId('allAppsGrid'));
+      scrollPageB(moving);
+    } else {
+      if (dir === 'up' || dir === 'down') return;
+      var other = dir === 'left' ? moving.previousSibling : moving.nextSibling;
+      if (!other || other.dataset.action !== 'app') return;
+      moving.parentNode.insertBefore(moving, dir === 'left' ? other : other.nextSibling);
+    }
     setFocus(moving);
   }
 
   function stopMoving() {
-    var order = [];
-    moving.classList.remove('is-moving');
+    var e = moving, saved;
+    e.classList.remove('is-moving');
     moving = null;
-    each(byId('appsTrack').children, function (t) { if (t.dataset.action === 'app') order.push(t.dataset.id); });
-    try { localStorage.setItem(DOCK_ORDER, JSON.stringify(order)); toast('Apps row saved'); }
-    catch (e) { toast('Could not save the order; it lasts until Ambient Home closes'); }
+    if (inGrid(e)) {
+      var order = [];
+      each(byId('allAppsGrid').querySelectorAll('.app-icon'), function (t) { order.push(t.dataset.id); });
+      saved = saveOrder(GRID_ORDER, order);
+    } else {
+      saved = saveOrder(DOCK_ORDER, dockIds());
+    }
+    toast(saved ? 'Order saved' : 'Could not save the order; it lasts until Ambient Home closes');
   }
 
   function buildAllApps() {
     var grid = byId('allAppsGrid');
-    Object.keys(C.apps).forEach(function (id) {
+    savedGridOrder(Object.keys(C.apps)).forEach(function (id) {
+      if (isHidden(id)) return;
       var item = el('div', 'grid-item');
       item.appendChild(appTile(id, 0, 'grid'));
       item.appendChild(el('div', 'grid-name', esc(C.apps[id].title)));
@@ -168,14 +299,62 @@
     });
   }
 
-  // Grid rows follow the real layout, so Up and Down match what is on screen.
-  function assignGridRows(grid) {
-    var tops = [];
+  // Grid rows follow the real layout, so Up and Down match what is on screen. On the second page they come after the
+  // rows above them (3 and 4), so Down from Inputs lands in the grid.
+  function assignGridRows(grid, first) {
+    var tops = [], base = first == null ? 5 : first;
     each(grid.querySelectorAll('.app-icon'), function (t) {
       var top = t.parentNode.offsetTop, row = tops.indexOf(top);
       if (row < 0) { tops.push(top); row = tops.length - 1; }
-      t.dataset.row = row;
+      t.dataset.row = base + row;
     });
+  }
+
+  // ---------- The second page: Continue watching and Home when shown, then All apps ----------
+  // Its sections stack from the top, under the clock, and the page scrolls to keep the focused item in view.
+  function layoutPageB() {
+    var y = 34;
+    [['mediaLabel', 'mediaRow'], ['homeLabel', 'homeRow'], ['gridLabel', 'allAppsGrid']].forEach(function (s) {
+      var label = byId(s[0]), block = byId(s[1]);
+      if (label.style.display === 'none') return;
+      label.style.top = y + 'px';
+      block.style.top = y + 36 + 'px';
+      y += 36 + block.offsetHeight + 48;
+    });
+  }
+
+  function scrollPageB(e) {
+    var content = byId('pageBContent'), view = byId('pageBClip').clientHeight, y = 0, n = e, s = content._y || 0;
+    while (n && n !== content) { y += n.offsetTop; n = n.offsetParent; }
+    if (y + e.offsetHeight + s > view - 40) s = view - 40 - y - e.offsetHeight;
+    if (y + s < 80) s = 80 - y;
+    content._y = Math.min(0, s);
+    content.style.transform = 'translateY(' + content._y + 'px)';
+  }
+
+  // ---------- The All apps shortcut at the end of the Apps row: a setting, on unless config.js turns it off ----------
+  var SHORTCUT = 'ambientHome.allAppsShortcut';
+
+  function allAppsShortcut() {
+    var saved = null;
+    try { saved = localStorage.getItem(SHORTCUT); } catch (e) { /* not saved */ }
+    return saved === null ? C.allAppsShortcut !== false : saved === 'on';
+  }
+
+  function setAllAppsShortcut(on) {
+    var track = byId('appsTrack'), tile = track.querySelector('[data-action="allapps"]');
+    try { localStorage.setItem(SHORTCUT, on ? 'on' : 'off'); } catch (e) { /* lasts until Ambient Home closes */ }
+    if (on && !tile) track.appendChild(allAppsTile());
+    if (!on && tile) {
+      track.removeChild(tile);
+      if (memory['ui:1'] === tile) memory['ui:1'] = track.firstChild;
+    }
+    toast(on ? 'All apps shortcut shown on the Home screen' : 'All apps shortcut hidden: press Down for All apps');
+  }
+
+  function showShortcutChoice() {
+    var on = allAppsShortcut() ? 'on' : 'off';
+    each(document.querySelectorAll('[data-group="allapps"]'), function (o) { o.classList.toggle('is-selected', o.dataset.value === on); });
   }
 
   function buildLaunchFx() {
@@ -232,6 +411,7 @@
     if (scope !== ui) return;
     showPage(+e.dataset.row >= 3 ? 'b' : 'a');
     if (page === 'a') updateTitle(e);
+    else scrollPageB(e);
     keepInView(e);
     parallax(e);
   }
@@ -281,7 +461,7 @@
     var action = e.dataset.action, id = e.dataset.id;
     if (action === 'app') launchApp(id);
     else if (action === 'input') switchInput(find(C.inputs, id));
-    else if (action === 'allapps') { assignGridRows(byId('allAppsGrid')); openOverlay(byId('allApps')); }
+    else if (action === 'allapps') setFocus(byId('allAppsGrid').querySelector('.app-icon'));
     else if (action === 'settings') openSettings();
     else if (action === 'forecast') openOverlay(byId('forecast'));
     else if (action === 'media') resumeMedia(find(C.media.items, id));
@@ -289,6 +469,11 @@
     else if (action === 'seg') selectOption(e);
     else if (action === 'lghome') openLgHome();
     else if (action === 'weatherloc') toast('Your weather location is set during install.');
+    else if (action === 'appmove') { closeOverlay(); startMoving(menuApp); }
+    else if (action === 'apppin') { closeOverlay(); togglePin(menuApp); }
+    else if (action === 'apphide') { closeOverlay(); hideApp(menuApp); }
+    else if (action === 'hiddenapps') openHiddenApps();
+    else if (action === 'unhide') unhideApp(e);
     else if (action === 'close') closeOverlay();
   }
 
@@ -378,7 +563,9 @@
 
   function selectOption(e) {
     each(e.parentNode.children, function (o) { o.classList.toggle('is-selected', o === e); });
-    if (e.dataset.group === 'home') {
+    if (e.dataset.group === 'allapps') {
+      setAllAppsShortcut(e.dataset.value === 'on');
+    } else if (e.dataset.group === 'home') {
       if (onTv()) setHomeButton(e.dataset.value === 'ours');
       else toast(e.dataset.value === 'lg' ? 'Home button now opens LG Home. Switch back here any time.' : 'Home button opens this home screen.');
     } else {
@@ -605,8 +792,8 @@
       okDown = true;
     }
     if (moving) {
-      if (key === 'left' || key === 'right') shiftMoving(key);
-      else if (key === 'ok' || key === 'back') stopMoving();
+      if (key === 'ok' || key === 'back') stopMoving();
+      else shiftMoving(key);
       return;
     }
     if (stack.length && !current) {
@@ -619,10 +806,10 @@
       return;
     }
     if (key === 'ok') {
-      // On an app in the Apps row, OK opens it when let go; held for a moment, it picks the app up to move it.
+      // On an app, OK opens it when let go; held for a moment, it opens the app's menu.
       if (canArrange(current)) {
         var held = current;
-        holdTimer = setTimeout(function () { holdTimer = null; startMoving(held); }, 600);
+        holdTimer = setTimeout(function () { holdTimer = null; openAppMenu(held); }, 600);
       } else {
         activate(current);
       }
@@ -729,6 +916,10 @@
   byId('wallpaper').appendChild(el('div', 'dim fill'));
   buildRows();
   buildAllApps();
+  layoutPageB();
+  assignGridRows(byId('allAppsGrid'));
+  showShortcutChoice();
+  showHiddenCount();
   buildLaunchFx();
   setFocus(byId('appsTrack').firstChild);
   moveIdle();
