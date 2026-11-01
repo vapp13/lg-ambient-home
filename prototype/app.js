@@ -670,16 +670,15 @@
     if (onTv()) openOnTv(inp.appId, inp.title);
   }
 
-  // Opens the title in Stremio, on the episode last watched: Stremio's deep link, stremio:///detail/type/id/video.
+  // Opens Stremio. LG's Stremio app ignores deep links (contentTarget with stremio:///detail/… or #/metadetails/…,
+  // tried on a C3 in 2026) and always starts on its home page, whose Continue watching row comes first and is in
+  // the same order as this one.
   function openStremio(e) {
-    var d = e.dataset, app = C.apps['io.strem.tv'];
+    var d = e.dataset, app = C.apps['io.strem.tv'], n = Array.prototype.indexOf.call(e.parentNode.children, e) + 1;
     openLaunch({ accent: d.accent, art: d.pic ? '<img class="launch-pic" alt="" src="' + esc(d.pic) + '">' : '',
-      kind: 'is-icon', title: d.title, sub: 'Opening in Stremio · ' + d.subtitle,
-      note: onTv() ? '' : 'Prototype: on the TV this opens ' + d.title + ' in Stremio. Press Back to return.' });
-    if (!onTv()) return;
-    openOnTv(app ? app.appId : 'io.strem.tv', 'Stremio', {
-      contentTarget: 'stremio:///detail/' + d.kind + '/' + encodeURIComponent(d.show) + '/' + encodeURIComponent(d.id)
-    });
+      kind: 'is-icon', title: d.title, sub: 'Opening Stremio · ' + (n === 1 ? 'first' : 'number ' + n) + ' in its Continue watching',
+      note: onTv() ? '' : 'Prototype: on the TV this opens Stremio. Press Back to return.' });
+    if (onTv()) openOnTv(app ? app.appId : 'io.strem.tv', 'Stremio');
   }
 
   function resumeMedia(item) {
