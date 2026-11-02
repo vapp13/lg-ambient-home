@@ -247,6 +247,7 @@ HOME_CONFIG.allAppsShortcut = false;      // no All apps icon in the Apps row (D
   <tr><td>Hold OK on an input</td><td><strong>Rename</strong> (on-screen keyboard) and <strong>Hide input</strong> / <strong>Show input</strong>.</td></tr>
   <tr><td>Settings &gt; Home button opens</td><td>Ambient Home or LG Home.</td></tr>
   <tr><td>Settings &gt; When the TV turns on</td><td><strong>Ambient Home</strong> (straight into it, behind LG's start-up cover) or <strong>LG's choice</strong> (the last input, or LG Home if Home Auto Launch is on). Counts from the next restart; <strong>Restart the TV now</strong> appears while a change waits for one. Needs the Home button set to Ambient Home.</td></tr>
+  <tr><td>Settings &gt; Animations</td><td><strong>Full</strong> (steps down by itself if the TV struggles), <strong>Reduced</strong> (no leaves, fireflies, glitter or chimney smoke; clouds and stars stop drifting) or <strong>Off</strong> (the same scene, still). In every mode the scene starts still and comes to life once the page draws smoothly.</td></tr>
   <tr><td>Settings &gt; Idle screen after</td><td>1, 5 or 10 minutes, or off. Kept across restarts.</td></tr>
   <tr><td>Settings &gt; All apps shortcut</td><td>Show or hide the All apps icon at the end of the Apps row.</td></tr>
   <tr><td>Settings &gt; Hidden apps</td><td>Lists hidden apps; OK on one brings it back.</td></tr>
@@ -368,6 +369,7 @@ HOME_CONFIG.allAppsShortcut = false;      // no All apps icon in the Apps row (D
   <li><strong>Power-on straight into Ambient Home:</strong> the startup script writes <code>/var/luna/preferences/bootd.json</code>, a copy of LG's <code>/etc/palm/bootd.json</code> whose power-on table sends the power button, the TV's own button and a cold start to Ambient Home (the method <a href="https://github.com/rudra-avatar/Hearth">Hearth</a> uses). It opens behind LG's start-up cover. Only a copy written by the script is ever replaced or removed.</li>
   <li><strong>Recent apps</strong> (Back on the Apps row) and <strong>Uninstall</strong> in an app's menu, from the root script, which keeps the history and removes apps with webOS's installer.</li>
   <li><strong>A splash picture</strong> (<code>prototype/splash.png</code>, made from <code>splash.svg</code>) shown while Ambient Home starts from scratch, replacing the grey placeholder. LG's full-boot cover shows only the app's name.</li>
+  <li><strong>Smoother start-up:</strong> the scene starts still and its animations begin once two half-second samples reach 50 fps (12 seconds at most); the first draw skips layout-forcing fades; the second screen is built 1.5 s after load; the root script runs Ambient Home's page at CPU priority -5 while it is on screen. Measured on the TV: load in 0.45 s instead of 0.81 s, 36 to 52 fps instead of about 5 between 1 and 4 seconds, 60 fps after. Settings &gt; Animations: Full, Reduced or Off.</li>
   <li><strong>Faster start:</strong> no grey splash screen (<code>noSplashOnLaunch</code>), and the second screen is built just after the page loads, so it loads in about 1 second instead of 4.</li>
 </ul>
 

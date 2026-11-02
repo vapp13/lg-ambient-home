@@ -128,7 +128,8 @@ async function running() {
       id: a.id, title: titles[a.id] || SYSTEM_TITLES[a.id] || a.id, kb: pids.reduce((sum, p) => sum + memoryKb(p), 0),
       onScreen: !!front && front.appId === a.id,
       // Left alone by Close all background apps: Ambient Home, LG's own home and overlays such as voice.
-      system: a.id === 'com.local.ambienthome' || a.defaultWindowType !== 'card'
+      system: a.id === 'com.local.ambienthome' || a.defaultWindowType !== 'card',
+      pids: pids
     };
   });
 }
@@ -246,6 +247,25 @@ async function uninstall(id) {
   if (fs.existsSync(APP)) writeIfChanged(APP + '/uninstall.json', JSON.stringify({ id: id, ok: ok, why: why, time: Date.now() }) + '\n', null, 0o644);
 }
 
+// ---------- A head start for Ambient Home ----------
+// While Ambient Home is on screen its page runs at a higher CPU priority (-5), so the scene stays smooth while the TV
+// starts its own services after being switched on; anywhere else it goes back to normal (0).
+let boosted = {};
+
+function boostAmbientHome(apps) {
+  const next = {};
+  apps.forEach((a) => {
+    if (a.id !== 'com.local.ambienthome') return;
+    (a.pids || []).forEach((pid) => {
+      const priority = a.onScreen ? -5 : 0;
+      next[pid] = priority;
+      if (boosted[pid] === priority) return;
+      try { require('os').setPriority(+pid, priority); } catch (e) { log('priority ' + pid + ': ' + e.message); }
+    });
+  });
+  boosted = next;
+}
+
 // ---------- Settings > When the TV turns on ----------
 // The choice (ambient, the default, or lg) is kept for tv-root-boot.sh, which writes or removes LG's boot table copy
 // (--bootd). LG's boot service reads that only as the TV starts, so power-on.json in Ambient Home's folder also says
@@ -286,6 +306,8 @@ async function writeRunning() {
     .forEach((id) => apps.push({ id: id, title: titles[id] || SYSTEM_TITLES[id] || id, kb: 0, notRunning: true, keepClosed: true }));
   const mem = fs.readFileSync('/proc/meminfo', 'utf8');
   const kb = (name) => +((new RegExp(name + ':\\s+(\\d+)').exec(mem) || [0, 0])[1]);
+  boostAmbientHome(apps);
+  apps.forEach((a) => { delete a.pids; });
   apps.sort((a, b) => b.kb - a.kb);
   writeIfChanged(APP + '/running.json', JSON.stringify({ time: Date.now(), totalKb: kb('MemTotal'),
     availableKb: kb('MemAvailable'), apps: apps }, null, 1) + '\n', null, 0o644);
@@ -357,7 +379,11 @@ process.on('SIGTERM', () => {
 });
 
 function openAmbientHome(why) {
-  luna('luna://com.webos.applicationManager/launch', { id: 'com.local.ambienthome' }).then(() => log('power on: opened Ambient Home (' + why + ')'));
+  luna('luna://com.webos.applicationManager/launch', { id: 'com.local.ambienthome' }).then(() => {
+    log('power on: opened Ambient Home (' + why + ')');
+    // Raise its priority (boostAmbientHome) as soon as its page is there, not at the next round.
+    [1500, 4000].forEach((ms) => setTimeout(() => writeRunning().catch(() => {}), ms));
+  });
 }
 
 // Runs luna-send subscribed to uri, calling each(line) for each update; restarts it if it ends.

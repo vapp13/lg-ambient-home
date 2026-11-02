@@ -72,7 +72,7 @@ window.SCENE = (function () {
     return (h % 12 || 12) + ':' + (mm < 10 ? '0' : '') + mm + ' ' + (h < 12 ? 'AM' : 'PM');
   }
   // The page asks the scene to rest (behind an idle screen, for example): no life events, no quality checks.
-  function paused() { return !!(hooks.paused && hooks.paused()); }
+  function paused() { return still() || !!(hooks.paused && hooks.paused()); }
   function show(name, fn) { each(document.querySelectorAll('[data-scene="' + name + '"]'), fn); }
   function showText(name, text) { show(name, function (e) { e.textContent = text; }); }
   function showHtml(name, html) { show(name, function (e) { e.innerHTML = html; }); }
@@ -319,11 +319,15 @@ window.SCENE = (function () {
     return o;
   }
 
-  // Layers fade with opacity; once hidden they leave the page, so their animations stop costing anything.
-  function setLayer(id, value) {
+  // Layers fade with opacity; once hidden they leave the page, so their animations stop costing anything. On the
+  // first draw (now) they are simply shown: there is nothing on screen to fade from, and measuring would force the
+  // browser to lay out the whole page early.
+  function setLayer(id, value, now) {
     var e = byId(id);
     clearTimeout(e._hide);
-    if (value > 0) {
+    if (value > 0 && now) {
+      e.style.display = '';
+    } else if (value > 0) {
       if (e.style.display === 'none') {
         e.style.opacity = 0;
         e.style.display = '';
@@ -387,7 +391,7 @@ window.SCENE = (function () {
     state.season = season;
     each(document.querySelectorAll('.sky'), function (s) { s.classList.toggle('is-on', s.getAttribute('data-phase') === phase); });
     var o = layerOpacity(phase, cond, season);
-    LAYERS.forEach(function (id) { setLayer(id, o[id] || 0); });
+    LAYERS.forEach(function (id) { setLayer(id, o[id] || 0, !was.phase); });
     if (VEIL[cond]) byId('veil').style.backgroundImage = veilGradient(VEIL[cond]);
     // Recolouring the landscape redraws it, so it happens in a single step: halfway through the sky's fade when the
     // time of day changes, straight away otherwise.
@@ -586,6 +590,40 @@ window.SCENE = (function () {
     });
   }
 
+  // ---------- Motion: Full, Reduced or Off, and a calm start ----------
+  // While the scene is still (class scene-still), every animation in it is paused where it is and nothing new happens
+  // (no birds, shooting stars or lightning). Off keeps it still. At start-up it is still too, until the page draws
+  // smoothly: the browser lays out and paints everything for the first time then, more slowly while the TV itself is
+  // still starting after being switched on, and the lake comes to life once that is done. Reduced hides the costliest
+  // extras (quality step 2) for good.
+  var motion = 'full', starting = true;
+
+  function still() { return motion === 'off' || starting; }
+
+  function applyMotion() {
+    stage.classList.toggle('scene-still', still());
+    if (motion === 'reduced') { autoQuality = false; clearTimeout(checkTimer); setQuality(2); }
+    else if (motion === 'full') { autoQuality = true; setQuality(0); if (!starting) checkSmoothness(); }
+  }
+
+  function setMotion(m) {
+    motion = m === 'reduced' || m === 'off' ? m : 'full';
+    if (stage) applyMotion();
+  }
+
+  // Ends the calm start once two half-second samples in a row reach 50 fps, or after 12 seconds at the most.
+  function calmStart() {
+    var since = Date.now(), smooth = 0;
+    function check() {
+      sampleFps(500, function (fps) {
+        smooth = fps >= 50 ? smooth + 1 : 0;
+        if (smooth >= 2 || Date.now() - since > 12000) { starting = false; applyMotion(); return; }
+        setTimeout(check, 250);
+      });
+    }
+    setTimeout(check, 600);
+  }
+
   // ---------- Automatic quality ----------
   // Once a new scene has settled, sample the frame rate. If the TV is struggling, try hiding the next most costly
   // extras (classes q1 to q3 in scene.css) and keep that step only if it clearly helps.
@@ -710,6 +748,7 @@ window.SCENE = (function () {
   function mount(el, options) {
     stage = el;
     hooks = options || {};
+    applyMotion();
     build();
     tick(true);
     setInterval(tick, 1000);
@@ -718,7 +757,8 @@ window.SCENE = (function () {
     byId('birds').addEventListener('animationend', function (ev) {
       if (ev.target === ev.currentTarget) ev.currentTarget.className = 'birds';
     });
-    checkSmoothness();
+    if (document.readyState === 'complete') calmStart();
+    else window.addEventListener('load', calmStart);
     every(5, 30, 70, flyIfReady);
     every(8, 10, 24, shootIfReady);
     every(4, 6, 13, strike);
@@ -729,6 +769,8 @@ window.SCENE = (function () {
     cycleTime: cycleTime, cycleWeather: cycleWeather, cycleSeason: cycleSeason, toggleLapse: toggleLapse,
     lapsing: function () { return !!lapse; },
     quality: function (q) { if (q != null) setQuality(q); return quality; },
-    auto: function (on) { autoQuality = !!on; if (!on) clearTimeout(checkTimer); }
+    auto: function (on) { autoQuality = !!on; if (!on) clearTimeout(checkTimer); },
+    motion: function (m) { if (m != null) setMotion(m); return motion; },
+    starting: function () { return starting; }
   };
 }());

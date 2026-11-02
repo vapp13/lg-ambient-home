@@ -343,6 +343,13 @@
     x.send();
   }
 
+  // ---------- Settings > Animations: Full, Reduced or Off (scene.js: Motion) ----------
+  var MOTION = 'ambientHome.motion';
+
+  function savedMotion() {
+    try { return localStorage.getItem(MOTION) || 'full'; } catch (e) { return 'full'; }
+  }
+
   // ---------- Settings > When the TV turns on (rooted TVs) ----------
   // tv-root-boot.sh has LG's boot service open Ambient Home at power-on while this says so and the Home button is set
   // to Ambient Home. LG reads that only as the TV starts, so power-on.json also says what it read at this start.
@@ -795,8 +802,10 @@
   function updateTitle(e) {
     var title = byId('focusTitle'), sub = byId('focusSubtitle'), box = byId('focusBox');
     if (title.textContent === e.dataset.title && sub.textContent === e.dataset.subtitle) return;
+    var first = !title.textContent;
     title.textContent = e.dataset.title || '';
     sub.textContent = e.dataset.subtitle || '';
+    if (first) return;
     box.classList.remove('swap');
     void box.offsetWidth;
     box.classList.add('swap');
@@ -956,7 +965,12 @@
 
   function selectOption(e) {
     each(e.parentNode.children, function (o) { o.classList.toggle('is-selected', o === e); });
-    if (e.dataset.group === 'poweron') {
+    if (e.dataset.group === 'motion') {
+      try { localStorage.setItem(MOTION, e.dataset.value); } catch (err) { /* lasts until Ambient Home closes */ }
+      SCENE.motion(e.dataset.value);
+      toast(e.dataset.value === 'off' ? 'Animations off: the scene stays still' :
+        e.dataset.value === 'reduced' ? 'Reduced animations: fewer moving details' : 'Full animations');
+    } else if (e.dataset.group === 'poweron') {
       if (!onTv()) { toast('This works on the TV'); return; }
       appRequest('powerOn', null, function () { loadPowerOn(3); }, null, e.dataset.value);
     } else if (e.dataset.group === 'autoclose') {
@@ -1405,6 +1419,7 @@
   fit();
   window.addEventListener('resize', fit);
   // The living lakeside rests while the idle screen is up.
+  SCENE.motion(savedMotion());
   SCENE.mount(stage, { paused: function () { return idleOn; } });
   byId('wallpaper').appendChild(el('div', 'dim fill'));
   buildRows();
@@ -1418,10 +1433,11 @@
     closeBackgroundOnStart();
   }
   if (document.readyState === 'complete') buildSecondPage();
-  else window.addEventListener('load', buildSecondPage);
+  else window.addEventListener('load', function () { setTimeout(buildSecondPage, 1500); });
   showShortcutChoice();
   showHiddenCount();
   each(document.querySelectorAll('[data-group="inputs"]'), function (o) { o.classList.toggle('is-selected', (o.dataset.value === 'all') === showAllInputs()); });
+  each(document.querySelectorAll('[data-group="motion"]'), function (o) { o.classList.toggle('is-selected', o.dataset.value === savedMotion()); });
   each(document.querySelectorAll('[data-group="idle"]'), function (o) { o.classList.toggle('is-selected', +o.dataset.value === idleMinutes); });
   buildLaunchFx();
   setFocus(byId('appsTrack').firstChild);

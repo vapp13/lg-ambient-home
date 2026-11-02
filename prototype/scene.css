@@ -168,6 +168,8 @@ body {
 }
 
 /* Automatic quality (scene.js): each step hides the next most costly extras when the TV can't keep up. */
+/* A still scene (Settings > Animations > Off, and the calm start): every animation waits where it is. */
+.scene-still #wallpaper, .scene-still #wallpaper * { animation-play-state: paused !important; }
 .q1 #snowNear, .q1 #shimmer, .q1 .birds { display: none; }
 .q2 #leaves, .q2 #fireflies, .q2 #glitter, .q2 #smoke { display: none; }
 .q2 .cloud, .q2 .star.twinkle { animation-play-state: paused; }
