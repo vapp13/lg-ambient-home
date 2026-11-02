@@ -116,7 +116,7 @@ var timer=setInterval(function(){if(stopping)return;readHomeRequest();try{var ra
  if(diagnosticUntil&&now>=diagnosticNext){diagnostic('sample');diagnosticNext=now+1000;}
  if(resumeGuardUntil&&now>=resumeGuardUntil)cancelResume();
  if(resumeGuardUntil&&resumeRetries<2&&ready&&!launching&&!visitingLG&&homeControl.enabled()&&
-    lastForeground==='com.webos.app.home'&&lgHomeSince!==null&&now-lgHomeSince>=1500&&now-lastLaunchSettledAt>=5000){
+    lastForeground==='com.webos.app.home'&&lgHomeSince!==null&&now-lgHomeSince>=1000&&now-lastLaunchSettledAt>=1000){
   resumeRetries++;launching=true;log({event:'resume-retry',attempt:resumeRetries});
   launch('com.local.ambienthome',function(ok){launching=false;if(!ok)log({event:'resume-retry-failed'});});
  }
