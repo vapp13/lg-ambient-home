@@ -365,11 +365,18 @@
 .set-value { color: var(--muted); }
 .set-item-gap { margin-top: 14px; }
 /* Settings > Running apps */
-.running-card { width: 940px; }
+.running-card { width: 1180px; }
 .running-memory { margin: 0 0 22px; }
-.running-list .set-item { margin-bottom: 12px; }
+.running-item {
+  display: flex; align-items: center; margin-bottom: 12px; padding: 12px 14px 12px 28px; border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05); font-size: 26px;
+}
+.running-name { flex: 1; }
+.running-size { margin: 0 22px 0 12px; color: var(--muted); }
 .running-item em { margin-left: 12px; font-style: normal; font-size: 20px; color: var(--muted); }
 .running-item.is-self { opacity: 0.5; }
+.running-btn { margin: 0 0 0 12px; padding: 12px 22px; font-size: 22px; }
+.running-btn.is-on { background: rgba(134, 239, 172, 0.22); }
 .running-card .set-footer .set-btn + .set-btn { margin-left: 16px; }
 .seg-option::after, .set-btn::after, .set-item::after { top: -7px; right: -7px; bottom: -7px; left: -7px; border-radius: 22px; }
 .seg-option.is-focused, .set-btn.is-focused { transform: scale(1.05); }

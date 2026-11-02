@@ -127,10 +127,90 @@ async function running() {
   });
 }
 
+// Keep closed, in two layers. LG's preload manager restarts some apps (LG Channels, YouTube, the browser…) in the
+// background a few seconds after they close, so their preloading is switched off through its own policy, which LG
+// keeps across restarts; only what was switched off here is switched back on. Then any kept-closed app that has
+// been off screen for 15 seconds is closed. Opening one still works; it only does not linger.
+const KEEP_CLOSED = '/var/lib/webosbrew/ambient-home/keep-closed.json';
+const NEVER_KEEP_CLOSED = ['com.local.ambienthome', 'com.local.nativehome', 'com.webos.app.home'];
+const PRELOAD = 'luna://com.webos.service.preloadmanager/';
+const offScreenSince = {}, closedAt = {};
+
+function keepClosedState() {
+  try {
+    const s = JSON.parse(fs.readFileSync(KEEP_CLOSED, 'utf8'));
+    return { closed: s.closed || [], preloadOff: s.preloadOff || [] };
+  } catch (e) {
+    return { closed: [], preloadOff: [] };
+  }
+}
+
+function keepClosedList() { return keepClosedState().closed; }
+
+async function preloadEnabled(id) {
+  const policy = await luna(PRELOAD + 'getPreloadPolicy');
+  const app = policy && (policy.applications || []).filter((a) => a.id === id)[0];
+  return app ? app.isEnabled : null;
+}
+
+function setPreload(id, on) { return luna(PRELOAD + 'setPreloadPolicy', { application: { id: id, isEnabled: on } }); }
+
+async function setKeepClosed(id, on) {
+  const s = keepClosedState();
+  s.closed = s.closed.filter((x) => x !== id);
+  if (on) {
+    s.closed.push(id);
+    if (await preloadEnabled(id) === true) {
+      await setPreload(id, false);
+      if (s.preloadOff.indexOf(id) < 0) s.preloadOff.push(id);
+    }
+  } else if (s.preloadOff.indexOf(id) >= 0) {
+    await setPreload(id, true);
+    s.preloadOff = s.preloadOff.filter((x) => x !== id);
+  }
+  fs.writeFileSync(KEEP_CLOSED, JSON.stringify(s));
+  log((on ? 'keeping closed: ' : 'no longer keeping closed: ') + id);
+}
+
+// Once a minute: preloading switched off here stays off (a firmware update could reset LG's policy).
+async function keepPreloadOff() {
+  const s = keepClosedState();
+  for (const id of s.preloadOff) if (s.closed.indexOf(id) >= 0 && await preloadEnabled(id) === true) await setPreload(id, false);
+}
+
+// Closes the kept-closed apps that are due; true when it closed any. An app that comes straight back three times in
+// ten minutes is left alone for ten minutes, rather than closed and restarted in a loop.
+async function enforceKeepClosed(apps) {
+  const list = keepClosedList(), now = Date.now();
+  let closed = false;
+  Object.keys(offScreenSince).forEach((id) => { if (!apps.some((a) => a.id === id)) delete offScreenSince[id]; });
+  for (const a of apps) {
+    if (a.onScreen || !offScreenSince[a.id]) offScreenSince[a.id] = now;
+    if (list.indexOf(a.id) < 0 || a.onScreen || now - offScreenSince[a.id] < 15000) continue;
+    const recent = (closedAt[a.id] || []).filter((t) => now - t < 600000);
+    if (recent.length >= 3) continue;
+    await closeApp(a.id);
+    closedAt[a.id] = recent.concat(now);
+    delete offScreenSince[a.id];
+    log('kept closed: ' + a.id + (recent.length === 2 ? ' (it keeps coming back; leaving it for 10 minutes)' : ''));
+    closed = true;
+  }
+  return closed;
+}
+
 async function writeRunning() {
   if (!fs.existsSync(APP)) return;
-  const apps = await running();
+  let apps = await running();
   if (!apps) return;
+  if (await enforceKeepClosed(apps)) {
+    await new Promise((r) => setTimeout(r, 800));
+    apps = (await running()) || apps;
+  }
+  const list = keepClosedList();
+  apps.forEach((a) => { a.keepClosed = list.indexOf(a.id) >= 0; });
+  // Kept-closed apps that are not running stay listed, so the setting can be turned off again.
+  list.filter((id) => !apps.some((a) => a.id === id))
+    .forEach((id) => apps.push({ id: id, title: titles[id] || SYSTEM_TITLES[id] || id, kb: 0, notRunning: true, keepClosed: true }));
   const mem = fs.readFileSync('/proc/meminfo', 'utf8');
   const kb = (name) => +((new RegExp(name + ':\\s+(\\d+)').exec(mem) || [0, 0])[1]);
   apps.sort((a, b) => b.kb - a.kb);
@@ -155,6 +235,9 @@ async function handleRequests() {
       if (req.action === 'close' && /^[\w.-]+$/.test(req.id || '') && req.id !== 'com.local.ambienthome') {
         await closeApp(req.id);
         log('closed ' + req.id);
+      } else if (req.action === 'keepClosed' && /^[\w.-]+$/.test(req.id || '') && NEVER_KEEP_CLOSED.indexOf(req.id) < 0) {
+        await setKeepClosed(req.id, req.on === true);
+        if (req.on === true) await closeApp(req.id);
       } else if (req.action === 'closeBackground') {
         const apps = (await running()) || [];
         for (const a of apps) if (!a.system && !a.onScreen) await closeApp(a.id);
@@ -174,7 +257,7 @@ async function handleRequests() {
 let rounds = 0;
 function stremio() {
   if (rounds++ % 6 || !fs.existsSync(APP)) return Promise.resolve();
-  return require('./tv-root-stremio.js').updateContinueWatching(APP, log);
+  return keepPreloadOff().then(() => require('./tv-root-stremio.js').updateContinueWatching(APP, log));
 }
 
 if (alreadyRunning()) process.exit(0);

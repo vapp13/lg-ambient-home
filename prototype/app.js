@@ -247,8 +247,8 @@
   // from this app's service (appRequest).
   var runningTimer = null, runningFirst = false;
 
-  function appRequest(action, id, done) {
-    callLuna('luna://com.local.ambienthome.service/appRequest', { action: action, id: id }, function (r) {
+  function appRequest(action, id, done, on) {
+    callLuna('luna://com.local.ambienthome.service/appRequest', { action: action, id: id, on: on }, function (r) {
       if (r.returnValue === false) toast(r.errorText === 'not-rooted' ? 'Running apps needs a rooted TV' : 'Could not ask the TV: ' + (r.errorText || 'no answer'));
       else if (done) done();
     });
@@ -272,7 +272,8 @@
       var data = null;
       try { data = JSON.parse(x.responseText); } catch (e) { /* not there yet */ }
       if (data && data.time >= since) showRunning(data);
-      else if (tries < 20) runningTimer = setTimeout(function () { pollRunning(since, tries + 1); }, 400);
+      // LG's preload manager can take several seconds to answer a Keep closed change.
+      else if (tries < 38) runningTimer = setTimeout(function () { pollRunning(since, tries + 1); }, 400);
       else if (data) showRunning(data);
       else byId('runningMemory').textContent = 'The TV did not answer. Is Ambient Home installed with its startup script?';
     };
@@ -284,23 +285,34 @@
 
   function showRunning(data) {
     var ov = byId('runningApps'), list = byId('runningList'), focus = null;
-    var focusId = current && current.dataset.action === 'closeapp' ? current.dataset.id : null;
+    var running = current && /^(closeapp|keepclosed)$/.test(current.dataset.action);
+    var focusId = running ? current.dataset.id : null, focusAction = running ? current.dataset.action : null;
     if (!ov.classList.contains('is-open')) return;
     list.innerHTML = '';
     if (!data) { byId('runningMemory').textContent = 'Checking what is running…'; return; }
     byId('runningMemory').textContent = sizeOf(data.availableKb) + ' of ' + sizeOf(data.totalKb) +
-      ' memory free. Press OK on an app to close it.';
+      ' memory free. Keep closed stops the TV from starting an app in the background, and closes it when you leave it.';
     data.apps.forEach(function (a, i) {
-      var self = a.id === 'com.local.ambienthome';
-      var row = el('div', 'set-item running-item' + (self ? ' is-self' : ''), '<span>' + esc(a.title) +
-        (self ? ' <em>this screen</em>' : a.onScreen ? ' <em>on screen</em>' : a.system ? ' <em>system</em>' : '') +
-        '</span><span class="set-value">' + (a.kb ? sizeOf(a.kb) : '') + '</span>');
-      if (!self) setData(row, { row: i, action: 'closeapp', id: a.id, title: a.title });
+      var self = a.id === 'com.local.ambienthome', fixed = self || a.system;
+      var note = self ? 'this screen' : a.notRunning ? 'not running' : a.onScreen ? 'on screen' : a.system ? 'system' : '';
+      var row = el('div', 'running-item' + (self ? ' is-self' : ''),
+        '<span class="running-name">' + esc(a.title) + (note ? ' <em>' + note + '</em>' : '') + '</span>' +
+        '<span class="running-size">' + (a.kb ? sizeOf(a.kb) : '') + '</span>');
+      if (!self && !a.notRunning) {
+        var close = el('div', 'set-btn running-btn', 'Close');
+        setData(close, { row: i, action: 'closeapp', id: a.id, title: a.title });
+        row.appendChild(close);
+      }
+      if (!fixed) {
+        var keep = el('div', 'set-btn running-btn' + (a.keepClosed ? ' is-on' : ''), (a.keepClosed ? '\u2713 ' : '') + 'Keep closed');
+        setData(keep, { row: i, action: 'keepclosed', id: a.id, title: a.title, on: a.keepClosed ? 'on' : 'off' });
+        row.appendChild(keep);
+      }
       list.appendChild(row);
-      if (a.id === focusId) focus = row;
+      if (a.id === focusId) focus = row.querySelector('[data-action="' + focusAction + '"]') || row.querySelector('[data-row]');
     });
     // The list takes focus when it first arrives, and keeps it on the same app (or the first) as it changes.
-    if (scope === ov && (runningFirst || !current || !ov.contains(current) || current.dataset.action === 'closeapp')) {
+    if (scope === ov && (runningFirst || !current || !ov.contains(current) || running)) {
       setFocus(focus || list.querySelector('[data-row]') || ov.querySelector('[data-action="closebackground"]'));
     }
     runningFirst = false;
@@ -309,6 +321,14 @@
   function closeRunning(e) {
     var since = Date.now();
     appRequest('close', e.dataset.id, function () { toast('Closing ' + e.dataset.title + '…'); pollRunning(since); });
+  }
+
+  function keepClosed(e) {
+    var on = e.dataset.on !== 'on', since = Date.now();
+    appRequest('keepClosed', e.dataset.id, function () {
+      toast(on ? e.dataset.title + ' will be kept closed' : e.dataset.title + ' can run in the background again');
+      pollRunning(since);
+    }, on);
   }
 
   function closeBackground() {
@@ -706,6 +726,7 @@
     else if (action === 'hiddenapps') openHiddenApps();
     else if (action === 'runningapps') openRunning();
     else if (action === 'closeapp') closeRunning(e);
+    else if (action === 'keepclosed') keepClosed(e);
     else if (action === 'closebackground') closeBackground();
     else if (action === 'unhide') unhideApp(e);
     else if (action === 'close') closeOverlay();
