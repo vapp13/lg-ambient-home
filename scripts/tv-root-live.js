@@ -317,6 +317,21 @@ function watchPower() {
   });
 }
 
+// After a full start (the TV was off at the wall, or restarted itself overnight), this script only starts once the
+// picture is already on, so it never sees "Prepare Power On": if the TV is on and showing something else, open
+// Ambient Home now.
+async function afterStartUp() {
+  const uptime = +fs.readFileSync('/proc/uptime', 'utf8').split(' ')[0];
+  if (uptime > 300 || !homeIsOurs()) return;
+  const [power, front] = await Promise.all([
+    luna('luna://com.webos.service.tvpower/power/getPowerState'),
+    luna('luna://com.webos.applicationManager/getForegroundAppInfo')
+  ]);
+  if (!power || power.state !== 'Active' || !front || front.appId === 'com.local.ambienthome') return;
+  poweringOnUntil = Date.now() + 20000;
+  openAmbientHome('after start-up, over ' + (front.appId || 'nothing'));
+}
+
 // Stremio's Continue watching (tv-root-stremio.js), once a minute.
 let rounds = 0;
 function stremio() {
@@ -331,3 +346,4 @@ fs.writeFileSync(PID, String(process.pid));
 })();
 setInterval(handleRequests, 1000);
 watchPower();
+afterStartUp().catch((e) => log(String(e && e.stack || e)));
