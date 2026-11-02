@@ -1266,7 +1266,6 @@
   // ---------- Start ----------
   if (window.TV_APPS) useTvApps(window.TV_APPS);
   if (onTv()) watchTvApps();
-  loadStremio();
   if (/Web0S|webOS/i.test(navigator.userAgent)) document.body.classList.add('on-tv');
   fit();
   window.addEventListener('resize', fit);
@@ -1274,9 +1273,16 @@
   SCENE.mount(stage, { paused: function () { return idleOn; } });
   byId('wallpaper').appendChild(el('div', 'dim fill'));
   buildRows();
-  buildAllApps();
-  layoutPageB();
-  assignGridRows(byId('allAppsGrid'));
+  // With no splash screen, webOS shows the app once the page has loaded: the second page (All apps and Stremio's
+  // pictures, fetched from the internet) is built just after, so it does not hold the first one back.
+  function buildSecondPage() {
+    buildAllApps();
+    layoutPageB();
+    assignGridRows(byId('allAppsGrid'));
+    loadStremio();
+  }
+  if (document.readyState === 'complete') buildSecondPage();
+  else window.addEventListener('load', buildSecondPage);
   showShortcutChoice();
   showHiddenCount();
   each(document.querySelectorAll('[data-group="inputs"]'), function (o) { o.classList.toggle('is-selected', (o.dataset.value === 'all') === showAllInputs()); });

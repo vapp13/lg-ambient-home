@@ -17,8 +17,14 @@ const EVERY = 10000;
 // Helper returns to Ambient Home when one of these apps is left for LG Home; not for these.
 const NOT_FOR_HELPER = ['com.local.ambienthome', 'com.local.nativehome', 'com.webos.app.home'];
 
+// The last 200 lines, in /tmp (gone at each restart).
 function log(message) {
-  try { fs.writeFileSync(LOG, new Date().toISOString() + ' ' + message + '\n'); } catch (e) { /* nowhere to say it */ }
+  try {
+    let lines = [];
+    try { lines = fs.readFileSync(LOG, 'utf8').split('\n').filter(Boolean).slice(-199); } catch (e) { /* first line */ }
+    lines.push(new Date().toISOString() + ' ' + message);
+    fs.writeFileSync(LOG, lines.join('\n') + '\n');
+  } catch (e) { /* nowhere to say it */ }
 }
 
 // One copy only: a second start (install, then boot) leaves the running one alone.
@@ -253,6 +259,64 @@ async function handleRequests() {
   }
 }
 
+// ---------- Power on: Ambient Home first ----------
+// At power-on LG opens LG Home (Home Auto Launch on) or the last input (off), and Home Helper replaces it with
+// Ambient Home only seconds later. When the Home button is set to Ambient Home (and Helper was not stopped with Home
+// pressed three times), and the remote's power button turned the TV on (not, say, a console over HDMI-CEC): launch
+// Ambient Home as the button is pressed, and for 20 seconds bring it straight back over whatever LG opens.
+function homeIsOurs() {
+  try {
+    if (fs.existsSync(HELPER_STATE + '/blocked')) return false;
+    return JSON.parse(fs.readFileSync(HELPER_STATE + '/home-control.json', 'utf8')).enabled === true;
+  } catch (e) {
+    return false;
+  }
+}
+
+let poweringOnUntil = 0;
+// Stopped with this script (an install starts a new copy), so they do not linger.
+const subscriptions = [];
+process.on('SIGTERM', () => {
+  // Closing script's terminal hangs up the luna-send inside it.
+  subscriptions.forEach((s) => s.kill());
+  process.exit(0);
+});
+
+function openAmbientHome(why) {
+  luna('luna://com.webos.applicationManager/launch', { id: 'com.local.ambienthome' }).then(() => log('power on: opened Ambient Home (' + why + ')'));
+}
+
+// Runs luna-send subscribed to uri, calling each(line) for each update; restarts it if it ends.
+function subscribe(uri, each) {
+  const sub = require('child_process').spawn('script', ['-q', '-c', 'luna-send -i ' + uri + " '{\"subscribe\":true}'", '/dev/null'],
+    { stdio: ['ignore', 'pipe', 'ignore'] });
+  subscriptions.push(sub);
+  let buffer = '';
+  sub.stdout.on('data', (data) => {
+    buffer += data;
+    let end;
+    while ((end = buffer.indexOf('\n')) >= 0) {
+      each(buffer.slice(0, end));
+      buffer = buffer.slice(end + 1);
+    }
+  });
+  sub.on('exit', () => setTimeout(() => subscribe(uri, each), 5000));
+}
+
+function watchPower() {
+  subscribe('luna://com.webos.service.tvpower/power/getPowerState', (line) => {
+    if (line.indexOf('"Prepare Power On"') < 0 || line.indexOf('"remoteKey"') < 0 || !homeIsOurs()) return;
+    poweringOnUntil = Date.now() + 20000;
+    openAmbientHome('power button');
+  });
+  subscribe('luna://com.webos.applicationManager/getForegroundAppInfo', (line) => {
+    const m = /"appId":"([^"]+)"/.exec(line);
+    if (!m || m[1] === 'com.local.ambienthome' || Date.now() > poweringOnUntil || !homeIsOurs()) return;
+    poweringOnUntil = 0;
+    openAmbientHome('over ' + m[1]);
+  });
+}
+
 // Stremio's Continue watching (tv-root-stremio.js), once a minute.
 let rounds = 0;
 function stremio() {
@@ -266,3 +330,4 @@ fs.writeFileSync(PID, String(process.pid));
   tick().then(stremio).then(writeRunning).catch((e) => log(String(e && e.stack || e))).then(() => setTimeout(loop, EVERY));
 })();
 setInterval(handleRequests, 1000);
+watchPower();
