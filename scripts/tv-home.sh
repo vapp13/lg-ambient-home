@@ -166,6 +166,8 @@ case "${1:-}" in
     ;;
   lg)
     if installed "$HELPER" && running; then stop_helper; fi
+    # On a rooted TV the power button opens LG's choice again from the next start.
+    root_repair
     echo "Home opens LG Home. Turn Ambient Home back on with $0 start, or in Ambient Home's Settings."
     ;;
   status)
@@ -191,7 +193,7 @@ case "${1:-}" in
       tv "luna-send-pub -n 1 luna://$HELPER.service/disable '{}'" >/dev/null
       stop_helper
       if [ -n "$ROOT" ]; then
-        tv "kill \$(cat /tmp/ambient-home-live.pid 2>/dev/null) 2>/dev/null; rm -rf $ROOT_BOOT ${ROOT_LIVE%/*}; umount /var/palm/jail/com.local.ambienthome.service/media/developer/apps/usr/palm/applications/$HELPER 2>/dev/null" >/dev/null
+        tv "sh $ROOT_BOOT --off; kill \$(cat /tmp/ambient-home-live.pid 2>/dev/null) 2>/dev/null; rm -rf $ROOT_BOOT ${ROOT_LIVE%/*}; umount /var/palm/jail/com.local.ambienthome.service/media/developer/apps/usr/palm/applications/$HELPER 2>/dev/null" >/dev/null
       fi
       "$BIN/ares-install" --device "$DEVICE" --remove "$HELPER"
     fi
