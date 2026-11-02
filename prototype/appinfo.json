@@ -9,7 +9,6 @@
   "largeIcon": "largeIcon.png",
   "resolution": "1920x1080",
   "disableBackHistoryAPI": true,
-  "noSplashOnLaunch": true,
   "splashBackground": "splash.png",
   "requiredACG": [
     "application.launcher"
