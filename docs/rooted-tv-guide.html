@@ -234,7 +234,7 @@ HOME_CONFIG.allAppsShortcut = false;      // no All apps icon in the Apps row (D
 <h3><span class="n">11</span>Restart once, so the TV starts into Ambient Home</h3>
 <p>Once Home is set to Ambient Home (step 10), the startup script tells LG's boot service to open Ambient Home when the TV is switched on. LG's boot service only reads that as the TV starts, so unplug the TV for 30 seconds and plug it back in once.</p>
 <div class="check"><strong>Check:</strong> turn the TV off with the remote and on again. You see LG's start-up cover with Ambient Home's logo and <em>Loading</em>, then Ambient Home, with no input or LG Home first.</div>
-<p>Only the remote's power button, the TV's own button and a cold start are sent to Ambient Home. A console turning the TV on over HDMI-CEC, a network wake-up and the Netflix button still go where LG sends them. Handing Home back to LG (Home three times, Settings, or <code>bash scripts/tv-home.sh lg</code>) takes it off from the next start.</p>
+<p>Only the remote's power button, the TV's own button and a cold start are sent to Ambient Home. A console turning the TV on over HDMI-CEC, a network wake-up and the Netflix button still go where LG sends them. Handing Home back to LG (Home three times, Settings, or <code>bash scripts/tv-home.sh lg</code>) takes it off from the next start, and so does choosing <strong>LG's choice</strong> in Settings &gt; When the TV turns on.</p>
 <div class="note">LG's own <strong>Home Auto Launch</strong> setting (Settings &gt; General &gt; System &gt; Additional Settings &gt; Home Settings) no longer matters for the power button. It was switched off on this TV while testing, before this method was found.</div>
 </div>
 
@@ -245,6 +245,7 @@ HOME_CONFIG.allAppsShortcut = false;      // no All apps icon in the Apps row (D
   <tr><td>Hold OK on an app</td><td><strong>Move</strong> (arrows, then OK or Back), <strong>Add to / Remove from Home screen</strong>, <strong>Hide app</strong>. Works in the Apps row and in All apps, and with the Magic Remote's button held.</td></tr>
   <tr><td>Hold OK on an input</td><td><strong>Rename</strong> (on-screen keyboard) and <strong>Hide input</strong> / <strong>Show input</strong>.</td></tr>
   <tr><td>Settings &gt; Home button opens</td><td>Ambient Home or LG Home.</td></tr>
+  <tr><td>Settings &gt; When the TV turns on</td><td><strong>Ambient Home</strong> (straight into it, behind LG's start-up cover) or <strong>LG's choice</strong> (the last input, or LG Home if Home Auto Launch is on). Counts from the next restart; <strong>Restart the TV now</strong> appears while a change waits for one. Needs the Home button set to Ambient Home.</td></tr>
   <tr><td>Settings &gt; Idle screen after</td><td>1, 5 or 10 minutes, or off. Kept across restarts.</td></tr>
   <tr><td>Settings &gt; All apps shortcut</td><td>Show or hide the All apps icon at the end of the Apps row.</td></tr>
   <tr><td>Settings &gt; Hidden apps</td><td>Lists hidden apps; OK on one brings it back.</td></tr>

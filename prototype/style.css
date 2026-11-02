@@ -364,6 +364,7 @@
 }
 .set-value { color: var(--muted); }
 .set-item-gap { margin-top: 14px; }
+.set-row.is-hidden { display: none; }
 /* Settings > Running apps */
 .running-card { width: 1180px; }
 .running-label { margin-top: 0; }

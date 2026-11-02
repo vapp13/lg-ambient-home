@@ -204,6 +204,31 @@ async function enforceKeepClosed(apps) {
   return closed;
 }
 
+// ---------- Settings > When the TV turns on ----------
+// The choice (ambient, the default, or lg) is kept for tv-root-boot.sh, which writes or removes LG's boot table copy
+// (--bootd). LG's boot service reads that only as the TV starts, so power-on.json in Ambient Home's folder also says
+// what it read at this start, and whether the Home button is set to Ambient Home (which the choice needs).
+const POWER_ON = '/var/lib/webosbrew/ambient-home/power-on';
+const BOOT_SCRIPT = '/var/lib/webosbrew/init.d/50-ambient-home';
+
+function powerOnChoice() {
+  try { return fs.readFileSync(POWER_ON, 'utf8').trim() === 'lg' ? 'lg' : 'ambient'; } catch (e) { return 'ambient'; }
+}
+
+function setPowerOn(value) {
+  fs.writeFileSync(POWER_ON, value + '\n');
+  log('when the TV turns on: ' + value);
+  return new Promise((resolve) => execFile('sh', [BOOT_SCRIPT, '--bootd'], { timeout: 30000 }, () => resolve()))
+    .then(writePowerOn);
+}
+
+function writePowerOn() {
+  if (!fs.existsSync(APP)) return;
+  let loaded = null;
+  try { loaded = fs.readFileSync('/tmp/ambient-home-power-on.loaded', 'utf8').trim(); } catch (e) { /* not noted at this start */ }
+  writeIfChanged(APP + '/power-on.json', JSON.stringify({ choice: powerOnChoice(), loaded: loaded, homeIsOurs: homeIsOurs() }) + '\n', null, 0o644);
+}
+
 async function writeRunning() {
   if (!fs.existsSync(APP)) return;
   let apps = await running();
@@ -244,6 +269,11 @@ async function handleRequests() {
       } else if (req.action === 'keepClosed' && /^[\w.-]+$/.test(req.id || '') && NEVER_KEEP_CLOSED.indexOf(req.id) < 0) {
         await setKeepClosed(req.id, req.on === true);
         if (req.on === true) await closeApp(req.id);
+      } else if (req.action === 'powerOn' && (req.value === 'ambient' || req.value === 'lg')) {
+        await setPowerOn(req.value);
+      } else if (req.action === 'restart') {
+        log('restarting the TV, asked from Settings');
+        await luna('luna://com.webos.service.sleep/shutdown/machineReboot', { reason: 'remoteKey' });
       } else if (req.action === 'closeBackground') {
         const apps = (await running()) || [];
         for (const a of apps) if (!a.system && !a.onScreen) await closeApp(a.id);
@@ -342,7 +372,7 @@ function stremio() {
 if (alreadyRunning()) process.exit(0);
 fs.writeFileSync(PID, String(process.pid));
 (function loop() {
-  tick().then(stremio).then(writeRunning).catch((e) => log(String(e && e.stack || e))).then(() => setTimeout(loop, EVERY));
+  tick().then(stremio).then(writeRunning).then(writePowerOn).catch((e) => log(String(e && e.stack || e))).then(() => setTimeout(loop, EVERY));
 })();
 setInterval(handleRequests, 1000);
 watchPower();

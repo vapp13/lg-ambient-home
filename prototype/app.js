@@ -247,8 +247,8 @@
   // from this app's service (appRequest).
   var runningTimer = null, runningFirst = false;
 
-  function appRequest(action, id, done, on) {
-    callLuna('luna://com.local.ambienthome.service/appRequest', { action: action, id: id, on: on }, function (r) {
+  function appRequest(action, id, done, on, value) {
+    callLuna('luna://com.local.ambienthome.service/appRequest', { action: action, id: id, on: on, value: value }, function (r) {
       if (r.returnValue === false) toast(r.errorText === 'not-rooted' ? 'Running apps needs a rooted TV' : 'Could not ask the TV: ' + (r.errorText || 'no answer'));
       else if (done) done();
     });
@@ -265,6 +265,38 @@
   function closeBackgroundOnStart() {
     if (!onTv() || !autoClose()) return;
     setTimeout(function () { appRequest('closeBackground', null, function () { toast('Background apps closed'); }); }, 10000);
+  }
+
+  // ---------- Settings > When the TV turns on (rooted TVs) ----------
+  // tv-root-boot.sh has LG's boot service open Ambient Home at power-on while this says so and the Home button is set
+  // to Ambient Home. LG reads that only as the TV starts, so power-on.json also says what it read at this start.
+  function loadPowerOn(tries) {
+    var x = new XMLHttpRequest();
+    x.onload = function () {
+      var d = null;
+      try { d = JSON.parse(x.responseText); } catch (e) { /* not there */ }
+      showPowerOn(d);
+    };
+    x.onerror = function () { showPowerOn(null); };
+    x.open('GET', 'power-on.json');
+    x.send();
+    if (tries) setTimeout(function () { loadPowerOn(tries - 1); }, 1500);
+  }
+
+  function showPowerOn(d) {
+    var note = byId('powerOnNote'), restart = byId('restartButton');
+    if (!d) {
+      note.textContent = onTv() ? 'Needs a rooted TV with Ambient Home\'s startup script.' : 'On the TV: what it opens when you switch it on.';
+      return;
+    }
+    each(document.querySelectorAll('[data-group="poweron"]'), function (o) { o.classList.toggle('is-selected', o.dataset.value === d.choice); });
+    var wanted = d.choice === 'ambient' && d.homeIsOurs ? 'ambient' : 'lg', pending = !!d.loaded && d.loaded !== wanted;
+    note.textContent = (!d.homeIsOurs && d.choice === 'ambient' ? 'The Home button is set to LG Home, so the TV starts as LG decides. ' :
+      wanted === 'ambient' ? 'The TV opens Ambient Home when you switch it on. ' :
+      'The TV opens what LG chooses: the last input, or LG Home if Home Auto Launch is on. ') +
+      (pending ? 'This takes effect after the TV restarts.' : '');
+    byId('restartRow').classList.toggle('is-hidden', !pending);
+    if (pending) restart.dataset.row = '1.6'; else delete restart.dataset.row;
   }
 
   function openRunning() {
@@ -742,6 +774,7 @@
     else if (action === 'closeapp') closeRunning(e);
     else if (action === 'keepclosed') keepClosed(e);
     else if (action === 'closebackground') closeBackground();
+    else if (action === 'restarttv') { toast('Restarting the TV…'); appRequest('restart'); }
     else if (action === 'unhide') unhideApp(e);
     else if (action === 'close') closeOverlay();
   }
@@ -843,7 +876,10 @@
 
   function selectOption(e) {
     each(e.parentNode.children, function (o) { o.classList.toggle('is-selected', o === e); });
-    if (e.dataset.group === 'autoclose') {
+    if (e.dataset.group === 'poweron') {
+      if (!onTv()) { toast('This works on the TV'); return; }
+      appRequest('powerOn', null, function () { loadPowerOn(3); }, null, e.dataset.value);
+    } else if (e.dataset.group === 'autoclose') {
       try { localStorage.setItem(AUTO_CLOSE, e.dataset.value); } catch (err) { /* not kept */ }
       toast(e.dataset.value === 'on' ? 'Background apps will close 10 seconds after Ambient Home starts' : 'Background apps are left alone when Ambient Home starts');
     } else if (e.dataset.group === 'inputs') {
@@ -880,6 +916,7 @@
     var top = stack[stack.length - 1];
     if (!top || top.ov.id !== 'settings') openOverlay(byId('settings'));
     if (onTv()) refreshHome();
+    loadPowerOn();
   }
 
   function refreshHome() {

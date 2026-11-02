@@ -7,8 +7,8 @@
 #    (5000) that lets Helper and Ambient Home's service share Helper's data folder.
 # 2. Ambient Home's service runs in a jail that sees only its own folder; bind Helper's folder in, so Settings can
 #    tell whether Helper is installed and running and switch the Home button.
-# 3. While the Home button is set to Ambient Home, have LG's boot service open it when the TV is switched on
-#    (sh 50-ambient-home --off takes that back).
+# 3. While the Home button is set to Ambient Home (and Settings > When the TV turns on says so), have LG's boot
+#    service open it when the TV is switched on (--bootd applies a change now, --off takes it back).
 # 4. Start tv-root-live.js, which keeps Ambient Home's list of apps and inputs up to date.
 # 5. At boot, start Helper if Home is set to Ambient Home and Home was not pressed three times.
 A=/media/developer/apps/usr/palm
@@ -44,37 +44,44 @@ fi
 
 # Power-on straight into Ambient Home. LG's boot service (bootd) opens the first app by why the TV was switched on
 # (common.firstAppByPowerOnReason in /etc/palm/bootd.json: the power button opens the last input), and reads
-# /var/luna/preferences/bootd.json instead when it exists. While the Home button is set to Ambient Home, that copy of
-# LG's file sends the power button, the TV's own button and a cold start to Ambient Home, which then opens behind
-# LG's start-up cover; every other reason (a console over HDMI-CEC, a network wake-up, the Netflix button) stays
-# LG's. bootd reads it as the TV starts, so a change counts from the next start. Only a copy written here (its md5
-# is kept) is ever replaced or removed; --off removes it.
+# /var/luna/preferences/bootd.json instead when it exists. While the Home button is set to Ambient Home and Settings >
+# When the TV turns on says Ambient Home (power-on = ambient, the default), that copy of LG's file sends the power
+# button, the TV's own button and a cold start to Ambient Home, which then opens behind LG's start-up cover; every
+# other reason (a console over HDMI-CEC, a network wake-up, the Netflix button) stays LG's. bootd reads it as the TV
+# starts, so a change counts from the next start: at each start, what it read is noted for Settings. Only a copy
+# written here (its md5 is kept) is ever replaced or removed. --bootd applies the choice now; --off removes the copy.
 BOOTD=/var/luna/preferences/bootd.json
 BOOTD_MARK=/var/lib/webosbrew/ambient-home/bootd.md5
+POWER_ON=/var/lib/webosbrew/ambient-home/power-on
 bootd_ours() { [ -s $BOOTD ] && [ "$(md5sum $BOOTD | cut -d ' ' -f 1)" = "$(cat $BOOTD_MARK 2>/dev/null)" ]; }
-if [ "$1" = --off ]; then
-  bootd_ours && rm -f $BOOTD $BOOTD_MARK && sync
-  exit 0
-fi
-[ -f $BOOTD ] && [ ! -s $BOOTD ] && bootd_ours && rm -f $BOOTD
-if [ -d $A/applications/com.local.ambienthome ] && [ ! -e $STATE/blocked ] &&
-   grep -qs '"enabled":true' $STATE/home-control.json; then
-  if [ ! -e $BOOTD ] || bootd_ours; then
-    node -e '
-      const fs = require("fs"), c = JSON.parse(fs.readFileSync("/etc/palm/bootd.json", "utf8"));
-      const table = c.common && c.common.firstAppByPowerOnReason;
-      if (!table) process.exit(1);
-      ["remoteKey", "localKey", "micomPower"].forEach((why) => { table[why] = "com.local.ambienthome"; });
-      const text = JSON.stringify(c, null, 4) + "\n";
-      JSON.parse(text);
-      fs.writeFileSync(process.argv[1], text, { mode: 0o644 });
-    ' $BOOTD.tmp && [ -s $BOOTD.tmp ] && mkdir -p ${BOOTD_MARK%/*} &&
-      md5sum $BOOTD.tmp | cut -d ' ' -f 1 > $BOOTD_MARK && mv -f $BOOTD.tmp $BOOTD && sync
-    rm -f $BOOTD.tmp
+bootd_apply() {
+  [ -f $BOOTD ] && [ ! -s $BOOTD ] && bootd_ours && rm -f $BOOTD
+  if [ -d $A/applications/com.local.ambienthome ] && [ ! -e $STATE/blocked ] &&
+     grep -qs '"enabled":true' $STATE/home-control.json && [ "$(cat $POWER_ON 2>/dev/null)" != lg ]; then
+    if [ ! -e $BOOTD ] || bootd_ours; then
+      node -e '
+        const fs = require("fs"), c = JSON.parse(fs.readFileSync("/etc/palm/bootd.json", "utf8"));
+        const table = c.common && c.common.firstAppByPowerOnReason;
+        if (!table) process.exit(1);
+        ["remoteKey", "localKey", "micomPower"].forEach((why) => { table[why] = "com.local.ambienthome"; });
+        const text = JSON.stringify(c, null, 4) + "\n";
+        JSON.parse(text);
+        fs.writeFileSync(process.argv[1], text, { mode: 0o644 });
+      ' $BOOTD.tmp && [ -s $BOOTD.tmp ] && mkdir -p ${BOOTD_MARK%/*} &&
+        md5sum $BOOTD.tmp | cut -d ' ' -f 1 > $BOOTD_MARK && mv -f $BOOTD.tmp $BOOTD && sync
+      rm -f $BOOTD.tmp
+    fi
+  elif bootd_ours; then
+    rm -f $BOOTD $BOOTD_MARK && sync
   fi
-elif bootd_ours; then
-  rm -f $BOOTD $BOOTD_MARK && sync
-fi
+}
+case "$1" in
+  --off) bootd_ours && rm -f $BOOTD $BOOTD_MARK && sync; exit 0 ;;
+  --bootd) bootd_apply; exit 0 ;;
+  --now) ;;
+  *) if bootd_ours; then echo ambient; else echo lg; fi > /tmp/ambient-home-power-on.loaded ;;
+esac
+bootd_apply
 
 # Keep Ambient Home's list of the TV's apps and inputs up to date (tv-root-live.js). After an install (--now) the
 # running copy makes way for the new one.

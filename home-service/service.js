@@ -21,10 +21,11 @@ var requests=__dirname+'/state';
 service.register('appRequest',function(m){
  if(!caller(m)){denied(m);return;}
  var p=m.payload||{},named=typeof p.id==='string'&&/^[\w.-]+$/.test(p.id);
- var ok=p.action==='refresh'||p.action==='closeBackground'||(p.action==='close'&&named)||(p.action==='keepClosed'&&named&&typeof p.on==='boolean');
+ var ok=p.action==='refresh'||p.action==='closeBackground'||(p.action==='close'&&named)||(p.action==='keepClosed'&&named&&typeof p.on==='boolean')||
+  (p.action==='powerOn'&&(p.value==='ambient'||p.value==='lg'))||p.action==='restart';
  if(!ok){m.respond({returnValue:false,errorText:'bad-request'});return;}
  var file=requests+'/request-'+Date.now()+'-'+Math.random().toString(36).slice(2)+'.json';
- try{fs.writeFileSync(file+'.tmp',JSON.stringify({action:p.action,id:p.id,on:p.on}),{mode:432});fs.renameSync(file+'.tmp',file);m.respond({returnValue:true});}
+ try{fs.writeFileSync(file+'.tmp',JSON.stringify({action:p.action,id:p.id,on:p.on,value:p.value}),{mode:432});fs.renameSync(file+'.tmp',file);m.respond({returnValue:true});}
  catch(e){m.respond({returnValue:false,errorText:e.code==='ENOENT'?'not-rooted':String(e.code||e)});}
 });
 
