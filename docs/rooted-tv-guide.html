@@ -231,9 +231,11 @@ HOME_CONFIG.allAppsShortcut = false;      // no All apps icon in the Apps row (D
 </div>
 
 <div class="step">
-<h3><span class="n">11</span>Turn off Home Auto Launch (optional)</h3>
-<p>With LG's <strong>Home Auto Launch</strong> on, the TV shows LG Home for a few seconds when you turn it on, before Ambient Home. With it off, it shows your last input (HDMI) for about the same time instead, then Ambient Home. On the TV: <strong>Settings &gt; General &gt; System &gt; Additional Settings &gt; Home Settings &gt; Home Auto Launch: off</strong>.</p>
-<p>Either way, Ambient Home is opened as soon as the remote's power button turns the TV on. When a console turns the TV on over HDMI-CEC, it is left alone.</p>
+<h3><span class="n">11</span>Restart once, so the TV starts into Ambient Home</h3>
+<p>Once Home is set to Ambient Home (step 10), the startup script tells LG's boot service to open Ambient Home when the TV is switched on. LG's boot service only reads that as the TV starts, so unplug the TV for 30 seconds and plug it back in once.</p>
+<div class="check"><strong>Check:</strong> turn the TV off with the remote and on again. You see LG's start-up cover with Ambient Home's logo and <em>Loading</em>, then Ambient Home, with no input or LG Home first.</div>
+<p>Only the remote's power button, the TV's own button and a cold start are sent to Ambient Home. A console turning the TV on over HDMI-CEC, a network wake-up and the Netflix button still go where LG sends them. Handing Home back to LG (Home three times, Settings, or <code>bash scripts/tv-home.sh lg</code>) takes it off from the next start.</p>
+<div class="note">LG's own <strong>Home Auto Launch</strong> setting (Settings &gt; General &gt; System &gt; Additional Settings &gt; Home Settings) no longer matters for the power button. It was switched off on this TV while testing, before this method was found.</div>
 </div>
 
 <h2 id="settings">4. Settings on the TV</h2>
@@ -361,6 +363,7 @@ HOME_CONFIG.allAppsShortcut = false;      // no All apps icon in the Apps row (D
   <li><strong>Stremio's Continue watching row</strong>, with pictures and progress. Opening a card opens Stremio.</li>
   <li><strong>Tall cards like Settings</strong> keep a margin and scroll.</li>
   <li><strong>Settings &gt; Running apps:</strong> Close, Keep closed, Close all background apps, and close background apps when Ambient Home starts.</li>
+  <li><strong>Power-on straight into Ambient Home:</strong> the startup script writes <code>/var/luna/preferences/bootd.json</code>, a copy of LG's <code>/etc/palm/bootd.json</code> whose power-on table sends the power button, the TV's own button and a cold start to Ambient Home (the method <a href="https://github.com/rudra-avatar/Hearth">Hearth</a> uses). It opens behind LG's start-up cover. Only a copy written by the script is ever replaced or removed.</li>
   <li><strong>Faster start:</strong> no grey splash screen (<code>noSplashOnLaunch</code>), and the second screen is built just after the page loads, so it loads in about 1 second instead of 4.</li>
 </ul>
 
@@ -382,12 +385,15 @@ HOME_CONFIG.allAppsShortcut = false;      // no All apps icon in the Apps row (D
   <tr><td><code>2643005</code></td><td>Open Ambient Home sooner when the TV is turned on</td></tr>
   <tr><td><code>a0f10c5</code></td><td>Optionally close background apps when Ambient Home starts</td></tr>
   <tr><td><code>4d92bea</code></td><td>Take Helper's app list from a rooted TV on a fresh copy</td></tr>
+  <tr><td><code>9312593</code></td><td>Open Ambient Home after a full start of the TV too</td></tr>
+  <tr><td><code>3ebba87</code></td><td>Bring Ambient Home back sooner when LG Home takes the screen</td></tr>
+  <tr><td><code>538f02e</code></td><td>Start the TV straight into Ambient Home through LG's boot table</td></tr>
 </table></div>
 
 <h3>Changes on the TV outside the project</h3>
 <ul>
   <li>Homebrew Channel: SSH Server on, Telnet off. Root logs in with the SSH key only; the <code>alpine</code> password stopped working after the first restart with a key.</li>
-  <li>LG setting <strong>Home Auto Launch: off</strong>. The original values were saved on the TV in <code>/var/lib/webosbrew/ambient-home/settings-before-test.json</code>.</li>
+  <li><code>/var/luna/preferences/bootd.json</code>, written by the startup script (see above). LG setting <strong>Home Auto Launch: off</strong>. The original values were saved on the TV in <code>/var/lib/webosbrew/ambient-home/settings-before-test.json</code>.</li>
   <li>LG Channels kept closed (its preloading is switched off through Keep closed), and Netflix kept closed. Six LG apps hidden in Ambient Home. All of these are changeable from Ambient Home's Settings.</li>
 </ul>
 
@@ -400,6 +406,8 @@ HOME_CONFIG.allAppsShortcut = false;      // no All apps icon in the Apps row (D
   <li><strong>Web pages can't list or close apps.</strong> <code>com.webos.applicationManager/running</code> is denied to them; root can use it, and <code>closeByAppId</code> works for every app except LG Home, which ignores it.</li>
   <li><strong>The preload manager restarts apps</strong> a few seconds after they close: <code>com.webos.service.preloadmanager</code>, with <code>getPreloadPolicy</code> and <code>setPreloadPolicy {"application":{"id":…,"isEnabled":false}}</code>. LG keeps the policy across restarts.</li>
   <li><strong>The TV closes every app in standby.</strong> At power-on, LG opens LG Home (Home Auto Launch on) or the last <em>input</em> (off; it only accepts real inputs there). Without a splash screen, webOS shows a web app once its page has fully loaded.</li>
+  <li><strong>LG's boot service chooses the first app by why the TV was switched on:</strong> <code>common.firstAppByPowerOnReason</code> in <code>/etc/palm/bootd.json</code> (here <code>remoteKey</code>, <code>localKey</code> and <code>upDownKey</code>, all "last app"), and it reads <code>/var/luna/preferences/bootd.json</code> instead when that file exists. An app named there opens behind LG's start-up cover (<code>com.webos.app.cpcover</code>). The reason for the last start: <code>luna://com.webos.service.tvpower/power/getPowerOnReason</code>.</li>
+  <li><strong>There is no setting for the Home button's app on this TV:</strong> <code>general.defaultApps</code> has no <code>home</code> entry, and LG Home is the system's home through its own <code>appinfo.json</code>.</li>
   <li><strong>LG's Stremio app ignores <code>contentTarget</code> deep links</strong> (<code>stremio:///detail/…</code>, <code>#/metadetails/…</code> and web links all open its home page). Stremio's server accepts requests from the TV (CORS <code>*</code>).</li>
   <li><strong>The TV's web inspector</strong> (port 9998) can run JavaScript in Ambient Home's page, which is handy for testing.</li>
 </ul>
