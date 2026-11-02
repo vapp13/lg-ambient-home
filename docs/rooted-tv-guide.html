@@ -129,7 +129,23 @@
   <li><strong>Block system updates: on.</strong> An LG update can remove root.</li>
 </ul>
 <p>The SSH server starts when the TV starts: if it was off, restart the TV after turning it on (unplug it for 30 seconds; the power button only puts it in standby).</p>
-<div class="warn"><strong>Careful with Life's Good Without Spying.</strong> With its protection on, the TV's SSH port stopped answering, and only came back after a <em>purge</em> in that app. If you use it, turn its options on one at a time and check that SSH still connects after each.</div>
+<div class="warn"><strong>Careful with Life's Good Without Spying.</strong> With all of its protection on, including Voice, the TV's SSH port stopped answering, and only came back after a <em>purge</em> in that app. If you use it, turn its options on a few at a time and check that SSH still connects after each.</div>
+<p>These Life's Good settings were tested with everything in this guide: SSH, Ambient Home, the weather, Stremio's Continue watching and the power-on handling all keep working.</p>
+<ul>
+  <li><strong>On:</strong>
+    <ul>
+      <li>ACR / Alphonso, SmartAd, Telemetry &amp; crash reports, Home recommendations, App usage uploads, LG Channels, Ads &amp; ACR, Boot purge;</li>
+      <li>LG service platform, together with NTP clock: the clock then comes from internet time, and the LG Content Store won't open until you switch LG service platform off;</li>
+      <li>ThinQ: this stops the LG ThinQ phone app and Alexa.</li>
+    </ul>
+  </li>
+  <li><strong>Off:</strong>
+    <ul>
+      <li>Voice: kept on, so voice search works, for example in Stremio;</li>
+      <li>Content Store, Remote code lookup, Firmware updates (the Homebrew Channel already blocks updates), LAN discovery (it breaks casting), DNS filter.</li>
+    </ul>
+  </li>
+</ul>
 </div>
 
 <div class="step">
