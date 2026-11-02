@@ -254,8 +254,22 @@
     });
   }
 
+  // When Ambient Home starts (after power-on, an install or a reload), it can close the background apps. It waits
+  // 10 seconds: the TV is still busy just after power-on, and LG's preload manager starts its apps a few seconds in.
+  var AUTO_CLOSE = 'ambientHome.autoCloseBackground';
+
+  function autoClose() {
+    try { return localStorage.getItem(AUTO_CLOSE) === 'on'; } catch (e) { return false; }
+  }
+
+  function closeBackgroundOnStart() {
+    if (!onTv() || !autoClose()) return;
+    setTimeout(function () { appRequest('closeBackground', null, function () { toast('Background apps closed'); }); }, 10000);
+  }
+
   function openRunning() {
     if (!onTv()) { toast('Running apps works on the TV'); return; }
+    each(document.querySelectorAll('[data-group="autoclose"]'), function (o) { o.classList.toggle('is-selected', (o.dataset.value === 'on') === autoClose()); });
     openOverlay(byId('runningApps'));
     runningFirst = true;
     showRunning(null);
@@ -656,7 +670,7 @@
     var y = 0, n = e, top = card.scrollTop, edge = 90;
     while (n && n !== card) { y += n.offsetTop; n = n.offsetParent; }
     if (n !== card) y = e.getBoundingClientRect().top - card.getBoundingClientRect().top + top;
-    if (+e.dataset.row === 0) top = 0;
+    if (+e.dataset.row <= 0) top = 0;
     else if (y + e.offsetHeight > top + card.clientHeight - edge) top = y + e.offsetHeight - card.clientHeight + edge;
     else if (y < top + edge) top = y - edge;
     card.scrollTop = top;
@@ -829,7 +843,10 @@
 
   function selectOption(e) {
     each(e.parentNode.children, function (o) { o.classList.toggle('is-selected', o === e); });
-    if (e.dataset.group === 'inputs') {
+    if (e.dataset.group === 'autoclose') {
+      try { localStorage.setItem(AUTO_CLOSE, e.dataset.value); } catch (err) { /* not kept */ }
+      toast(e.dataset.value === 'on' ? 'Background apps will close 10 seconds after Ambient Home starts' : 'Background apps are left alone when Ambient Home starts');
+    } else if (e.dataset.group === 'inputs') {
       try { localStorage.setItem(ALL_INPUTS, e.dataset.value === 'all' ? 'on' : 'off'); } catch (err) { /* not kept */ }
       buildInputs();
       toast(e.dataset.value === 'all' ? 'All inputs shown, hidden ones dimmed' : 'Only inputs in use are shown');
@@ -1280,6 +1297,7 @@
     layoutPageB();
     assignGridRows(byId('allAppsGrid'));
     loadStremio();
+    closeBackgroundOnStart();
   }
   if (document.readyState === 'complete') buildSecondPage();
   else window.addEventListener('load', buildSecondPage);

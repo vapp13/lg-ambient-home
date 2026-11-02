@@ -366,6 +366,8 @@
 .set-item-gap { margin-top: 14px; }
 /* Settings > Running apps */
 .running-card { width: 1180px; }
+.running-label { margin-top: 0; }
+.running-auto { margin-bottom: 26px; }
 .running-memory { margin: 0 0 22px; }
 .running-item {
   display: flex; align-items: center; margin-bottom: 12px; padding: 12px 14px 12px 28px; border-radius: 16px;
