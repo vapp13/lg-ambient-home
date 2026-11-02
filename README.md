@@ -120,7 +120,7 @@ You need an LG webOS TV with **Developer Mode** turned on (LG's Developer Mode a
 
 ### 🔓 Rooted TV (Homebrew Channel)
 
-If your TV is rooted and has the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel), you don't need LG's Developer Mode app. The scripts log in as root over SSH instead, using a key rather than a password.
+If your TV is rooted and has the [Homebrew Channel](https://github.com/webosbrew/webos-homebrew-channel), you don't need LG's Developer Mode app. [`docs/rooted-tv-guide.html`](docs/rooted-tv-guide.html) walks through it all from Windows, command by command, with troubleshooting and how it works on the TV. The scripts log in as root over SSH instead, using a key rather than a password.
 
 1. **On the TV**: open the Homebrew Channel's Settings and turn on **SSH Server**. Turn off **Telnet**, which gives anyone on your network root access with no password, and keep **Block system updates** on.
 2. **Give the TV a key**: make one, then copy it to the TV. The copy asks for the TV's root password, which is `alpine` unless you've changed it:

@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ambient Home on a Rooted LG TV</title>
+<style>
+  :root {
+    --bg: #f7f6f2; --card: #ffffff; --fg: #1d2129; --muted: #5d6573; --line: #e3e1da;
+    --accent: #0e7490; --accent-soft: #e0f2f6; --code-bg: #f0eee8; --warn: #a15c07; --warn-soft: #fdf3e2;
+    --ok: #15803d; --ok-soft: #e7f6ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12151b; --card: #1a1e26; --fg: #e8eaee; --muted: #9aa3b2; --line: #2a303b;
+      --accent: #5cc8e0; --accent-soft: #15313a; --code-bg: #0e1116; --warn: #f0b45c; --warn-soft: #33270f;
+      --ok: #6ee7a0; --ok-soft: #13301f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12151b; --card: #1a1e26; --fg: #e8eaee; --muted: #9aa3b2; --line: #2a303b;
+    --accent: #5cc8e0; --accent-soft: #15313a; --code-bg: #0e1116; --warn: #f0b45c; --warn-soft: #33270f;
+    --ok: #6ee7a0; --ok-soft: #13301f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 900px; margin: 0 auto; padding: 32px 16px 80px; }
+  header { margin-bottom: 28px; }
+  h1 { font-size: 34px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.01em; }
+  h2 { font-size: 24px; margin: 48px 0 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  h3 { font-size: 18px; margin: 28px 0 8px; }
+  p, li { max-width: 72ch; }
+  .lead { color: var(--muted); font-size: 18px; margin: 0; }
+  a { color: var(--accent); }
+  code { font: 14px/1.5 ui-monospace, "Cascadia Code", Consolas, monospace; background: var(--code-bg); padding: 1px 5px; border-radius: 5px; overflow-wrap: anywhere; }
+  .cmd {
+    position: relative; margin: 10px 0 16px; background: var(--code-bg); border: 1px solid var(--line);
+    border-radius: 10px; overflow-x: auto;
+  }
+  .cmd pre { margin: 0; padding: 14px 84px 14px 16px; font: 14px/1.55 ui-monospace, "Cascadia Code", Consolas, monospace; white-space: pre; }
+  .cmd button {
+    position: absolute; top: 8px; right: 8px; border: 1px solid var(--line); background: var(--card); color: var(--fg);
+    border-radius: 7px; padding: 4px 10px; font: 13px system-ui, sans-serif; cursor: pointer;
+  }
+  .cmd button.copied { color: var(--ok); border-color: var(--ok); }
+  .step { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 4px 20px 12px; margin: 18px 0; }
+  .step h3 { margin-top: 18px; }
+  .step h3 .n {
+    display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; margin-right: 10px;
+    border-radius: 50%; background: var(--accent); color: var(--card); font-size: 15px;
+  }
+  .note, .warn, .check { border-radius: 10px; padding: 10px 14px; margin: 12px 0; }
+  .note { background: var(--accent-soft); }
+  .warn { background: var(--warn-soft); }
+  .warn strong:first-child { color: var(--warn); }
+  .check { background: var(--ok-soft); }
+  .check strong:first-child { color: var(--ok); }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 15px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; }
+  .toc { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 20px; }
+  .toc ol { margin: 6px 0; padding-left: 20px; columns: 2; column-gap: 32px; }
+  .toc li { break-inside: avoid; }
+  .theme { float: right; border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 8px; padding: 4px 10px; cursor: pointer; font: 13px system-ui, sans-serif; }
+  .table-wrap { overflow-x: auto; }
+  @media (max-width: 640px) {
+    h1 { font-size: 28px; }
+    .toc ol { columns: 1; }
+    .step { padding: 2px 14px 10px; }
+  }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <button class="theme" id="theme" type="button">Dark / light</button>
+  <h1>Ambient Home on a rooted LG TV</h1>
+  <p class="lead">Installing Ambient Home and Home Helper from Windows on an LG webOS TV rooted with the Homebrew Channel, done by hand from start to finish, and a record of every change made to the project along the way.</p>
+</header>
+
+<nav class="toc">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#what">What you end up with</a></li>
+    <li><a href="#need">What you need</a></li>
+    <li><a href="#install">Installation, step by step</a></li>
+    <li><a href="#settings">Settings on the TV</a></li>
+    <li><a href="#check">Final check</a></li>
+    <li><a href="#everyday">Everyday commands</a></li>
+    <li><a href="#trouble">Troubleshooting</a></li>
+    <li><a href="#how">How it works on the TV</a></li>
+    <li><a href="#changes">Every change made</a></li>
+    <li><a href="#findings">What we learned about the TV</a></li>
+  </ol>
+</nav>
+
+<h2 id="what">1. What you end up with</h2>
+<ul>
+  <li><strong>Ambient Home</strong> as the TV's home screen: the living lakeside with the clock and live weather, your app shortcuts and inputs on the first screen, and on the second screen (press Down from Inputs) Stremio's <em>Continue watching</em> and all your apps.</li>
+  <li><strong>The remote's Home button</strong> opens Ambient Home (through <strong>Home Helper</strong>), and the TV opens it by itself when you turn it on.</li>
+  <li><strong>Everything stays up to date by itself</strong>: apps you install or remove, devices you plug in, and Stremio's progress. No syncing from the computer.</li>
+  <li><strong>Settings &gt; Running apps</strong>: what is running and how much memory it uses, Close, <em>Keep closed</em> (stops LG starting an app in the background), and closing background apps when Ambient Home starts.</li>
+</ul>
+
+<h2 id="need">2. What you need</h2>
+<ul>
+  <li>An <strong>LG webOS TV rooted with the Homebrew Channel</strong>. This guide was written on an OLED65C34LA (webOS 23, firmware 23.25.40). Developer Mode is not used.</li>
+  <li>A <strong>Windows PC on the same network</strong> as the TV, with:
+    <ul>
+      <li><strong>Git for Windows</strong> (<a href="https://git-scm.com/download/win">git-scm.com</a>), which brings <strong>Git Bash</strong> and <code>ssh</code>. <strong>Run every command in this guide in Git Bash</strong>, not in PowerShell or Command Prompt.</li>
+      <li><strong>Node.js 22 or newer</strong> (<a href="https://nodejs.org">nodejs.org</a>).</li>
+      <li><strong>Python 3</strong> from <a href="https://www.python.org/downloads/">python.org</a>, with <em>Add python.exe to PATH</em> ticked. (Windows' built-in <code>python3</code> is only a shortcut to the Microsoft Store; the scripts use <code>python</code> instead.)</li>
+    </ul>
+  </li>
+  <li>The <strong>TV's IP address</strong>: TV Settings &gt; General &gt; Network &gt; your connection. In the commands below, replace <code>TV_IP</code> with it (for example <code>192.168.1.111</code>). Giving the TV a fixed address in your router saves surprises later.</li>
+</ul>
+
+<h2 id="install">3. Installation, step by step</h2>
+
+<div class="step">
+<h3><span class="n">1</span>Set up the Homebrew Channel</h3>
+<p>On the TV, open the <strong>Homebrew Channel</strong>, then its <strong>Settings</strong>:</p>
+<ul>
+  <li><strong>SSH Server: on.</strong> The computer installs everything over SSH.</li>
+  <li><strong>Telnet: off.</strong> Telnet gives anyone on your network root access with no password.</li>
+  <li><strong>Block system updates: on.</strong> An LG update can remove root.</li>
+</ul>
+<p>The SSH server starts when the TV starts: if it was off, restart the TV after turning it on (unplug it for 30 seconds; the power button only puts it in standby).</p>
+<div class="warn"><strong>Careful with Life's Good Without Spying.</strong> With its protection on, the TV's SSH port stopped answering, and only came back after a <em>purge</em> in that app. If you use it, turn its options on one at a time and check that SSH still connects after each.</div>
+</div>
+
+<div class="step">
+<h3><span class="n">2</span>Get the project</h3>
+<div class="cmd"><pre>git clone https://github.com/vapp13/ambient-home.git
+cd ambient-home</pre></div>
+<p>Until the rooted-TV work is merged into <code>main</code>, switch to its branch (skip this once it is merged):</p>
+<div class="cmd"><pre>git checkout rooted-tv-windows</pre></div>
+<p>Every later command runs from this <code>ambient-home</code> folder.</p>
+</div>
+
+<div class="step">
+<h3><span class="n">3</span>Install LG's command-line tools inside the project</h3>
+<div class="cmd"><pre>npm install --prefix tools @webos-tools/cli@3.2.6 --ignore-scripts --no-save --no-package-lock</pre></div>
+<div class="check"><strong>Check:</strong> <code>ls tools/node_modules/.bin | grep ares-install</code> lists <code>ares-install</code>.</div>
+</div>
+
+<div class="step">
+<h3><span class="n">4</span>Make an SSH key and give it to the TV</h3>
+<p>A key lets the scripts log in as root without a password. Make one (press Enter if asked anything):</p>
+<div class="cmd"><pre>ssh-keygen -t ed25519 -N "" -f ~/.ssh/lgtv_ed25519</pre></div>
+<p>Copy its public half to the TV. Replace <code>TV_IP</code>:</p>
+<div class="cmd"><pre>ssh root@TV_IP "mkdir -p ~/.ssh &amp;&amp; cat &gt;&gt; ~/.ssh/authorized_keys &amp;&amp; chmod 700 ~/.ssh &amp;&amp; chmod 600 ~/.ssh/authorized_keys" &lt; ~/.ssh/lgtv_ed25519.pub</pre></div>
+<ul>
+  <li>The first time, SSH asks whether to trust the TV (<em>The authenticity of host … can't be established</em>): type <code>yes</code>.</li>
+  <li>It then asks for the TV's root password. On a Homebrew Channel TV it is <code>alpine</code> unless you changed it. Nothing shows while you type. Seeing no output afterwards means it worked.</li>
+</ul>
+<div class="check"><strong>Check:</strong> this prints <code>key works</code> without asking for a password:</div>
+<div class="cmd"><pre>ssh -i ~/.ssh/lgtv_ed25519 root@TV_IP "echo key works"</pre></div>
+<div class="note">The root password is not something LG's tools set: <code>password=</code> in LG's commands only records the TV's existing password. That is why this guide uses a key and never a password.</div>
+</div>
+
+<div class="step">
+<h3><span class="n">5</span>Register the TV with LG's tools</h3>
+<div class="cmd"><pre>tools/node_modules/.bin/ares-setup-device -a lgtv -i "host=TV_IP" -i "port=22" -i "username=root" -i "privatekey=lgtv_ed25519"</pre></div>
+<div class="check"><strong>Check:</strong> both commands work; the second prints the TV's model and firmware.</div>
+<div class="cmd"><pre>tools/node_modules/.bin/ares-setup-device --list</pre></div>
+<div class="cmd"><pre>tools/node_modules/.bin/ares-device -i --device lgtv</pre></div>
+<p>Seeing <code>root@TV_IP:22</code> in the list is how the scripts know the TV is rooted and install over SSH. If <code>lgtv</code> already exists (from an earlier try), change it with <code>-m lgtv</code> instead of <code>-a lgtv</code>.</p>
+</div>
+
+<div class="step">
+<h3><span class="n">6</span>Restart the TV</h3>
+<p>Unplug the TV for 30 seconds, then plug it back in. Now that a key is on the TV, the Homebrew Channel stops setting the <code>alpine</code> password at startup: root can only log in with your key.</p>
+<div class="check"><strong>Check:</strong> step 4's <code>echo key works</code> command still works.</div>
+</div>
+
+<div class="step">
+<h3><span class="n">7</span>Your own settings (optional)</h3>
+<p>Personal settings live in <code>prototype/config.local.js</code>, which git ignores. Create it in any text editor, for example with Notepad:</p>
+<div class="cmd"><pre>notepad prototype/config.local.js</pre></div>
+<p>Paste and adjust (keep only the lines you want):</p>
+<div class="cmd"><pre>// Personal settings for this TV. Git ignores this file.
+HOME_CONFIG.weather.latitude = 50.72;     // your coordinates, for live weather
+HOME_CONFIG.weather.longitude = -1.88;
+HOME_CONFIG.media.show = false;           // no demo Continue watching row (Stremio's still shows)
+HOME_CONFIG.home.show = false;            // no demo Home Assistant row
+HOME_CONFIG.allAppsShortcut = false;      // no All apps icon in the Apps row (Down still opens All apps)</pre></div>
+<p>The All apps shortcut can also be switched later in Ambient Home's Settings.</p>
+</div>
+
+<div class="step">
+<h3><span class="n">8</span>Install Ambient Home</h3>
+<div class="cmd"><pre>bash scripts/tv-preview.sh</pre></div>
+<p>This builds Ambient Home, uploads it over SSH, installs it with the TV's own installer, opens it, and puts the root scripts on the TV (see <a href="#how">How it works</a>). The TV's installer sometimes takes up to three minutes; the script waits.</p>
+<div class="check"><strong>Check:</strong> Ambient Home opens on the TV. Within about 10 seconds your real apps and inputs appear, and within a minute Stremio's <em>Continue watching</em> (on the second screen) fills in if Stremio is signed in on the TV.</div>
+</div>
+
+<div class="step">
+<h3><span class="n">9</span>Install Zig (for Home Helper)</h3>
+<p>Home Helper has two small C programs, compiled here from source with Zig, installed inside the project:</p>
+<div class="cmd"><pre>python -m venv tools/venv &amp;&amp; tools/venv/Scripts/pip install ziglang==0.14.1</pre></div>
+</div>
+
+<div class="step">
+<h3><span class="n">10</span>Install Home Helper and take over the Home button</h3>
+<div class="cmd"><pre>TV_HOST=TV_IP bash scripts/tv-home.sh install</pre></div>
+<p>A prompt appears on the TV asking to let Home Helper see which app is on screen and whether the TV is on: <strong>accept it with the remote</strong> (it disappears if you press another button; if that happens, run the command again). The installer may take a few minutes.</p>
+<p>Then switch the Home button to Ambient Home:</p>
+<div class="cmd"><pre>bash scripts/tv-home.sh start</pre></div>
+<div class="cmd"><pre>bash scripts/tv-home.sh status</pre></div>
+<div class="check"><strong>Check:</strong> <code>status</code> says <em>Helper is running; Home opens Ambient Home</em>, and the Home button on the remote opens Ambient Home.</div>
+</div>
+
+<div class="step">
+<h3><span class="n">11</span>Turn off Home Auto Launch (optional)</h3>
+<p>With LG's <strong>Home Auto Launch</strong> on, the TV shows LG Home for a few seconds when you turn it on, before Ambient Home. With it off, it shows your last input (HDMI) for about the same time instead, then Ambient Home. On the TV: <strong>Settings &gt; General &gt; System &gt; Additional Settings &gt; Home Settings &gt; Home Auto Launch: off</strong>.</p>
+<p>Either way, Ambient Home is opened as soon as the remote's power button turns the TV on. When a console turns the TV on over HDMI-CEC, it is left alone.</p>
+</div>
+
+<h2 id="settings">4. Settings on the TV</h2>
+<p>Open Ambient Home's Settings with the cog at the top right. Hold <strong>OK</strong> on an app or an input for its menu.</p>
+<div class="table-wrap"><table>
+  <tr><th>Where</th><th>What</th></tr>
+  <tr><td>Hold OK on an app</td><td><strong>Move</strong> (arrows, then OK or Back), <strong>Add to / Remove from Home screen</strong>, <strong>Hide app</strong>. Works in the Apps row and in All apps, and with the Magic Remote's button held.</td></tr>
+  <tr><td>Hold OK on an input</td><td><strong>Rename</strong> (on-screen keyboard) and <strong>Hide input</strong> / <strong>Show input</strong>.</td></tr>
+  <tr><td>Settings &gt; Home button opens</td><td>Ambient Home or LG Home.</td></tr>
+  <tr><td>Settings &gt; Idle screen after</td><td>1, 5 or 10 minutes, or off. Kept across restarts.</td></tr>
+  <tr><td>Settings &gt; All apps shortcut</td><td>Show or hide the All apps icon at the end of the Apps row.</td></tr>
+  <tr><td>Settings &gt; Hidden apps</td><td>Lists hidden apps; OK on one brings it back.</td></tr>
+  <tr><td>Settings &gt; Running apps</td><td>Running apps with their memory and the TV's free memory. <strong>Close</strong>; <strong>Keep closed</strong> (stops LG's preload manager starting the app in the background and closes it 15 seconds after you leave it); <strong>Close all background apps</strong>; and <strong>When Ambient Home starts: Close background apps</strong> (10 seconds after it loads).</td></tr>
+  <tr><td>Settings &gt; Inputs</td><td><strong>In use only</strong> (inputs with no device name and nothing connected stay hidden until something is plugged in) or <strong>All inputs</strong> (hidden ones dimmed).</td></tr>
+</table></div>
+<p>Ways back to LG Home: hold <strong>Back</strong> for a second (once), press <strong>Home three times</strong> quickly (until you turn Ambient Home back on), or Settings &gt; Home button opens &gt; LG Home.</p>
+
+<h2 id="check">5. Final check</h2>
+<p>Unplug the TV for 30 seconds and plug it back in, then:</p>
+<div class="cmd"><pre>bash scripts/tv-home.sh status</pre></div>
+<div class="cmd"><pre>ssh -i ~/.ssh/lgtv_ed25519 root@TV_IP "ps | grep [t]v-root-live; tail -n 5 /tmp/ambient-home-live.log"</pre></div>
+<div class="check"><strong>Expected:</strong> Helper is running and Home opens Ambient Home; <code>tv-root-live.js</code> is running; the log shows the app list and <em>Continue watching</em> being updated. Telnet should refuse connections (port 23 closed).</div>
+
+<h2 id="everyday">6. Everyday commands</h2>
+<div class="table-wrap"><table>
+  <tr><th>To</th><th>Run (in Git Bash, in <code>ambient-home</code>)</th></tr>
+  <tr><td>Install a new version of Ambient Home after <code>git pull</code> or an edit</td><td><code>bash scripts/tv-preview.sh</code></td></tr>
+  <tr><td>Reinstall Ambient Home and Home Helper together</td><td><code>TV_HOST=TV_IP bash scripts/tv-home.sh install</code>, then <code>bash scripts/tv-home.sh start</code></td></tr>
+  <tr><td>See whether Helper is running</td><td><code>bash scripts/tv-home.sh status</code></td></tr>
+  <tr><td>Hand Home back to LG / take it again</td><td><code>bash scripts/tv-home.sh lg</code> / <code>bash scripts/tv-home.sh start</code></td></tr>
+  <tr><td>Take everything off the TV</td><td><code>bash scripts/tv-home.sh remove</code> (Helper, Ambient Home, Ambient Wallpaper, the startup script and the live script)</td></tr>
+  <tr><td>Install only Ambient Wallpaper</td><td><code>bash scripts/tv-preview.sh --wallpaper</code></td></tr>
+  <tr><td>Read the TV-side log</td><td><code>ssh -i ~/.ssh/lgtv_ed25519 root@TV_IP "cat /tmp/ambient-home-live.log"</code></td></tr>
+  <tr><td>Preview Ambient Home on the PC</td><td><code>python -m http.server 8766 --bind 127.0.0.1 --directory prototype</code>, then open <code>http://127.0.0.1:8766</code></td></tr>
+</table></div>
+<p>The app list no longer needs <code>scripts/tv-sync-apps.mjs</code> on a rooted TV: the TV keeps it up to date itself.</p>
+
+<h2 id="trouble">7. Troubleshooting</h2>
+<h3>SSH times out (<code>Connection timed out</code> on port 22)</h3>
+<ul>
+  <li>Check <strong>SSH Server</strong> is on in the Homebrew Channel's Settings, then restart the TV properly (unplug 30 seconds): the SSH server only starts at boot.</li>
+  <li>If the TV answers on the network but port 22 silently drops connections, something is blocking it. In our case it was Life's Good Without Spying; a <em>purge</em> in that app brought SSH back.</li>
+  <li>A TV in standby does not answer SSH: turn the picture on.</li>
+</ul>
+<h3>The TV rejects the root password when copying the key</h3>
+<p>The password is the TV's existing root password (<code>alpine</code> on a fresh Homebrew Channel). If you typed something else into an earlier <code>ares-setup-device … password=</code> command, that did not change the TV's password.</p>
+<h3>Home opens LG Home</h3>
+<ul>
+  <li><code>bash scripts/tv-home.sh status</code>. <em>Home pressed three times</em> means Helper was stopped on purpose: <code>bash scripts/tv-home.sh start</code>.</li>
+  <li>Settings in Ambient Home says <em>Home Helper is not installed</em>: run <code>bash scripts/tv-preview.sh</code> once, which reinstalls the startup script and runs it.</li>
+</ul>
+<h3>Installing seems stuck</h3>
+<p>The TV's installer sometimes takes up to three minutes, then finishes. If a run was interrupted, run the same command again.</p>
+<h3>Continue watching is empty</h3>
+<ul>
+  <li>Stremio must be installed and signed in on the TV. The list refreshes every minute (from Stremio's server every 5 minutes).</li>
+  <li>Check the log (<a href="#everyday">Everyday commands</a>) for lines starting <em>Stremio library</em>.</li>
+  <li>Opening a card opens Stremio: LG's Stremio app ignores links to a title, so it starts on its home, where the same title is in the same place in its own Continue watching.</li>
+</ul>
+<h3>An app I kept closed came back</h3>
+<p>Keep closed switches off LG's preloading and closes the app 15 seconds after it is off screen. An app that comes straight back three times in ten minutes is left alone for ten minutes, rather than closed in a loop.</p>
+
+<h2 id="how">8. How it works on the TV</h2>
+<p>Everything runs as Developer Mode-style apps plus two small root scripts that the Homebrew Channel starts. Nothing in LG's firmware is changed, and <code>scripts/tv-home.sh remove</code> takes it all off.</p>
+<div class="table-wrap"><table>
+  <tr><th>On the TV</th><th>What it does</th></tr>
+  <tr><td><code>/media/developer/apps/…/com.local.ambienthome</code></td><td>Ambient Home (web app) and its small service <code>com.local.ambienthome.service</code>.</td></tr>
+  <tr><td><code>/media/developer/apps/…/com.local.nativehome</code></td><td>Home Helper: watches the remote and opens Ambient Home on Home.</td></tr>
+  <tr><td><code>/var/lib/webosbrew/init.d/50-ambient-home</code><br>(from <code>scripts/tv-root-boot.sh</code>)</td><td>Run as root by the Homebrew Channel at every boot. Puts back safe file permissions (LG's <code>devmode.conf</code> makes <code>/media/developer</code> world-writable at boot, and Helper refuses to start like that); lets Ambient Home's service see Helper's folder (its jail sees only its own folder otherwise); creates the request folder for Running apps; starts the live script; starts Helper if Home is set to Ambient Home.</td></tr>
+  <tr><td><code>/var/lib/webosbrew/ambient-home/tv-root-live.js</code></td><td>Root, Node 16. Every 10 seconds: the TV's apps and inputs (with icons) for Ambient Home and Helper; running apps and memory; Keep closed. Once a minute: Stremio's Continue watching. Answers Running apps requests (refresh, close, keep closed, close background apps) and opens Ambient Home at power-on. Log: <code>/tmp/ambient-home-live.log</code>.</td></tr>
+  <tr><td><code>/var/lib/webosbrew/ambient-home/tv-root-stremio.js</code></td><td>Reads the Stremio app's own sign-in from the TV's web storage (LevelDB) and asks Stremio's server for the library. The sign-in key stays in that process; Ambient Home gets only titles, pictures and progress (<code>stremio.json</code>).</td></tr>
+  <tr><td><code>/var/lib/webosbrew/ambient-home/keep-closed.json</code></td><td>Apps kept closed, and those whose preloading was switched off by Keep closed (switched back on when you turn it off).</td></tr>
+  <tr><td><code>/home/root/.ssh/authorized_keys</code></td><td>Your SSH key.</td></tr>
+</table></div>
+<p>Ambient Home's service only accepts calls from Ambient Home, and the root script only accepts four requests from it: refresh, close an app, keep an app closed, close background apps. It never closes Ambient Home, LG Home or Home Helper.</p>
+
+<h2 id="changes">9. Every change made</h2>
+<p>All on the branch <code>rooted-tv-windows</code> of <code>vapp13/ambient-home</code>, starting from <code>main</code> at <em>Add a weekly forecast and Ambient Wallpaper</em>.</p>
+
+<h3>Installing on a rooted TV, from Windows</h3>
+<ul>
+  <li><strong><code>scripts/tv-lib.sh</code></strong> (new), shared by the install scripts:
+    <ul>
+      <li>detects a TV registered as root;</li>
+      <li>installs packages over SSH with webOS's own installer, because LG's <code>ares-install</code> fails there with <em>Unable to exec</em>;</li>
+      <li>reads the installer's progress through a terminal, because <code>luna-send</code> prints nothing into a pipe;</li>
+      <li>falls back from <code>rsync</code>, <code>python3</code> and <code>shasum</code>, which Windows lacks.</li>
+    </ul>
+  </li>
+  <li><strong><code>scripts/tv-preview.sh</code></strong> and <strong><code>scripts/tv-home.sh</code></strong>:
+    <ul>
+      <li>use <code>tv-lib.sh</code>;</li>
+      <li>put the root scripts on a rooted TV and repair permissions after each change;</li>
+      <li>find Zig in a Windows venv;</li>
+      <li><code>remove</code> also removes the root scripts;</li>
+      <li>a fresh copy of the project takes Helper's app list from the TV.</li>
+    </ul>
+  </li>
+  <li><strong><code>scripts/tv-root-boot.sh</code></strong> (new): the startup script described in <a href="#how">How it works</a>.</li>
+  <li><strong><code>scripts/tv-root-live.js</code></strong> (new):
+    <ul>
+      <li>the live list of apps and inputs, and the running apps;</li>
+      <li>Keep closed, using LG's preload policy plus a watchdog that backs off;</li>
+      <li>opening Ambient Home at power-on;</li>
+      <li>a 200-line log.</li>
+    </ul>
+  </li>
+  <li><strong><code>scripts/tv-root-stremio.js</code></strong> (new): a small LevelDB and Snappy reader for Stremio's sign-in, and Continue watching from Stremio's library.</li>
+  <li><strong><code>home-service/service.js</code></strong>: <code>appRequest</code>, which passes Running apps requests to the root script as files in the service's state folder.</li>
+  <li><strong>README</strong>: a <em>Rooted TV (Homebrew Channel)</em> section, plus Windows notes. <strong><code>scripts/fix-ipk.py</code></strong> and <strong><code>helper/README.md</code></strong>: Mac-only wording removed.</li>
+</ul>
+
+<h3>Ambient Home itself</h3>
+<ul>
+  <li><strong>The help bar</strong> (preview controls) no longer shows on the TV.</li>
+  <li><strong>Settings' weather location</strong> shows your coordinates instead of always "Not set".</li>
+  <li><strong>Demo rows</strong> can be hidden with <code>show: false</code>.</li>
+  <li><strong>The second screen</strong> holds All apps (and Continue watching), and scrolls.</li>
+  <li><strong>The All apps shortcut</strong> is a setting.</li>
+  <li><strong>Hold OK on an app:</strong> move, add to or remove from the Home screen, hide. This works in the Apps row and in All apps, and with the Magic Remote. Settings &gt; Hidden apps brings hidden apps back.</li>
+  <li><strong>Apps keep their places</strong> when hidden or reinstalled.</li>
+  <li><strong>The idle screen setting</strong> is kept across restarts.</li>
+  <li><strong>Inputs:</strong> rename and hide. Unused inputs are hidden until something is connected; Settings &gt; Inputs can show all.</li>
+  <li><strong>Live updates</strong> from the TV's list: the Inputs row in place; a reload once for new apps.</li>
+  <li><strong>Stremio's Continue watching row</strong>, with pictures and progress. Opening a card opens Stremio.</li>
+  <li><strong>Tall cards like Settings</strong> keep a margin and scroll.</li>
+  <li><strong>Settings &gt; Running apps:</strong> Close, Keep closed, Close all background apps, and close background apps when Ambient Home starts.</li>
+  <li><strong>Faster start:</strong> no grey splash screen (<code>noSplashOnLaunch</code>), and the second screen is built just after the page loads, so it loads in about 1 second instead of 4.</li>
+</ul>
+
+<h3>Commits</h3>
+<div class="table-wrap"><table>
+  <tr><th>Commit</th><th>Change</th></tr>
+  <tr><td><code>ba52345</code></td><td>Support rooted TVs (Homebrew Channel) and Windows</td></tr>
+  <tr><td><code>8c4b1b2</code></td><td>Rearrange the Apps row, hide demo rows, and tidy the TV view</td></tr>
+  <tr><td><code>b48b9fe</code></td><td>Add an app menu, All apps on the second page, and hidden apps</td></tr>
+  <tr><td><code>5a8e05d</code></td><td>Keep the idle screen setting across restarts</td></tr>
+  <tr><td><code>77df65a</code></td><td>Open the app menu with the Magic Remote, and keep apps' places</td></tr>
+  <tr><td><code>b528ed4</code></td><td>Rename and hide inputs, and show unused inputs only when needed</td></tr>
+  <tr><td><code>866b9f5</code></td><td>Keep the TV's apps and inputs up to date by themselves on rooted TVs</td></tr>
+  <tr><td><code>7d41137</code></td><td>Show Stremio's Continue watching on rooted TVs</td></tr>
+  <tr><td><code>e69ed25</code></td><td>Open Stremio itself from Continue watching</td></tr>
+  <tr><td><code>8fc71e0</code></td><td>Keep tall cards like Settings within the screen</td></tr>
+  <tr><td><code>1241f53</code></td><td>Add Settings &gt; Running apps on rooted TVs</td></tr>
+  <tr><td><code>a7ea605</code></td><td>Add Keep closed to Settings &gt; Running apps</td></tr>
+  <tr><td><code>2643005</code></td><td>Open Ambient Home sooner when the TV is turned on</td></tr>
+  <tr><td><code>a0f10c5</code></td><td>Optionally close background apps when Ambient Home starts</td></tr>
+  <tr><td><code>4d92bea</code></td><td>Take Helper's app list from a rooted TV on a fresh copy</td></tr>
+</table></div>
+
+<h3>Changes on the TV outside the project</h3>
+<ul>
+  <li>Homebrew Channel: SSH Server on, Telnet off. Root logs in with the SSH key only; the <code>alpine</code> password stopped working after the first restart with a key.</li>
+  <li>LG setting <strong>Home Auto Launch: off</strong>. The original values were saved on the TV in <code>/var/lib/webosbrew/ambient-home/settings-before-test.json</code>.</li>
+  <li>LG Channels kept closed (its preloading is switched off through Keep closed), and Netflix kept closed. Six LG apps hidden in Ambient Home. All of these are changeable from Ambient Home's Settings.</li>
+</ul>
+
+<h2 id="findings">10. What we learned about the TV</h2>
+<ul>
+  <li><strong>LG's <code>ares-install</code></strong> uploads fine over the Homebrew Channel's SSH, then fails with <em>Unable to exec</em>. Installing with <code>luna://com.webos.appInstallService/dev/install</code> works.</li>
+  <li><strong><code>luna-send</code> prints nothing when its output is a pipe,</strong> and does not notice that a subscription has ended. Run it under <code>script</code> (a terminal), or over <code>ssh -tt</code>.</li>
+  <li><strong>At every boot,</strong> <code>/etc/init/devmode.conf</code> runs <code>chmod -R 777 /media/developer</code>. The Homebrew Channel's <code>init.d</code> scripts run after it, which is where the fix goes.</li>
+  <li><strong>A dev app's service runs in a jail</strong> that only sees its own folder; a bind mount made at boot shows it another one.</li>
+  <li><strong>Web pages can't list or close apps.</strong> <code>com.webos.applicationManager/running</code> is denied to them; root can use it, and <code>closeByAppId</code> works for every app except LG Home, which ignores it.</li>
+  <li><strong>The preload manager restarts apps</strong> a few seconds after they close: <code>com.webos.service.preloadmanager</code>, with <code>getPreloadPolicy</code> and <code>setPreloadPolicy {"application":{"id":…,"isEnabled":false}}</code>. LG keeps the policy across restarts.</li>
+  <li><strong>The TV closes every app in standby.</strong> At power-on, LG opens LG Home (Home Auto Launch on) or the last <em>input</em> (off; it only accepts real inputs there). Without a splash screen, webOS shows a web app once its page has fully loaded.</li>
+  <li><strong>LG's Stremio app ignores <code>contentTarget</code> deep links</strong> (<code>stremio:///detail/…</code>, <code>#/metadetails/…</code> and web links all open its home page). Stremio's server accepts requests from the TV (CORS <code>*</code>).</li>
+  <li><strong>The TV's web inspector</strong> (port 9998) can run JavaScript in Ambient Home's page, which is handy for testing.</li>
+</ul>
+</main>
+<script>
+  // Copy buttons on every command, and a light/dark switch.
+  document.querySelectorAll('.cmd').forEach(function (box) {
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'Copy';
+    button.addEventListener('click', function () {
+      var text = box.querySelector('pre').textContent;
+      var done = function () {
+        button.textContent = 'Copied';
+        button.classList.add('copied');
+        setTimeout(function () { button.textContent = 'Copy'; button.classList.remove('copied'); }, 1500);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () {});
+      else {
+        var area = document.createElement('textarea');
+        area.value = text;
+        document.body.appendChild(area);
+        area.select();
+        try { document.execCommand('copy'); done(); } catch (e) { /* select by hand */ }
+        area.remove();
+      }
+    });
+    box.appendChild(button);
+  });
+  document.getElementById('theme').addEventListener('click', function () {
+    var root = document.documentElement;
+    var dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark';
+  });
+</script>
+</body>
+</html>
