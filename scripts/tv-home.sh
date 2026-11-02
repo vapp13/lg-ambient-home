@@ -122,6 +122,12 @@ case "${1:-}" in
   install)
     : "${TV_HOST:?Set TV_HOST to the TV IP address: TV_HOST=<TV IP> $0 install}"
     build
+    # Helper's setup reads the TV's apps from prototype/tv-apps.js. A rooted TV keeps that list itself
+    # (tv-root-live.js, once Ambient Home is installed), so a fresh copy of the project takes it from there.
+    if [ -n "$ROOT" ] && [ ! -s prototype/tv-apps.js ]; then
+      tv_ssh "cat /media/developer/apps/usr/palm/applications/$APP_ID/tv-apps.js" > prototype/tv-apps.js 2>/dev/null ||
+        rm -f prototype/tv-apps.js
+    fi
     node scripts/tv-helper-key.mjs "$TV_HOST"
     # A Helper that is already installed must let go of the remote before it is replaced.
     if installed "$HELPER"; then stop_helper; fi
