@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Ambient Home's start-up picture (appinfo.json splashBackground), shown by LG's start-up cover while it loads.
+     The wordmark is added in Outfit Light when splash.png is made:
+     magick prototype/splash.svg -font prototype/fonts/outfit-300.ttf -pointsize 112 -kerning 2 -fill "#f3efe4" \
+       -gravity center -annotate +0-150 "Ambient Home" prototype/splash.png -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#070d22"/>
+      <stop offset="0.55" stop-color="#14224a"/>
+      <stop offset="1" stop-color="#25386a"/>
+    </linearGradient>
+    <linearGradient id="lake" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#131f40"/>
+      <stop offset="1" stop-color="#050a18"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#f3efe0" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#f3efe0" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1920" height="700" fill="url(#sky)"/>
+  <rect y="700" width="1920" height="380" fill="url(#lake)"/>
+
+  <g fill="#e9e6f5">
+    <circle cx="180" cy="120" r="2.4"/><circle cx="340" cy="210" r="1.6"/><circle cx="520" cy="90" r="2"/>
+    <circle cx="700" cy="170" r="1.4"/><circle cx="860" cy="70" r="2.2"/><circle cx="1010" cy="200" r="1.5"/>
+    <circle cx="1180" cy="110" r="1.8"/><circle cx="1600" cy="90" r="2.2"/><circle cx="1760" cy="190" r="1.6"/>
+    <circle cx="1850" cy="60" r="1.4"/><circle cx="90" cy="300" r="1.5"/><circle cx="1290" cy="300" r="1.4"/>
+    <circle cx="420" cy="330" r="1.2"/><circle cx="1700" cy="330" r="1.3"/><circle cx="620" cy="260" r="1.1"/>
+  </g>
+
+  <circle cx="1460" cy="240" r="190" fill="url(#glow)"/>
+  <circle cx="1460" cy="240" r="72" fill="#f3efe0"/>
+
+  <polygon fill="#2c3d6b" points="0,700 160,560 300,640 470,470 640,620 780,540 930,700"/>
+  <polygon fill="#e8ebf4" points="470,470 430,512 452,506 470,522 492,504 512,510"/>
+  <polygon fill="#e8ebf4" points="160,560 132,585 150,582 163,594 178,580 190,586"/>
+  <polygon fill="#33467a" points="760,700 980,500 1120,610 1280,450 1470,640 1600,560 1760,700"/>
+  <polygon fill="#e8ebf4" points="1280,450 1238,492 1262,486 1282,502 1302,486 1324,492"/>
+  <polygon fill="#e8ebf4" points="980,500 952,527 970,523 984,535 999,522 1012,528"/>
+  <polygon fill="#22315c" points="1560,700 1700,600 1820,660 1920,610 1920,700"/>
+
+  <g fill="#0d1630">
+    <polygon points="60,700 80,640 100,700"/><polygon points="96,700 120,620 144,700"/>
+    <polygon points="1700,700 1722,628 1744,700"/><polygon points="1740,700 1760,652 1780,700"/>
+    <polygon points="1790,700 1814,610 1838,700"/><polygon points="1835,700 1852,660 1869,700"/>
+  </g>
+
+  <g>
+    <rect x="1088" y="652" width="72" height="48" fill="#0d1630"/>
+    <polygon points="1080,656 1124,624 1168,656" fill="#0d1630"/>
+    <rect x="1104" y="668" width="16" height="14" fill="#f6c56b"/>
+    <rect x="1130" y="668" width="16" height="14" fill="#f6c56b"/>
+  </g>
+
+  <g fill="#e9e4d4" opacity="0.55">
+    <rect x="1420" y="728" width="80" height="4" rx="2"/>
+    <rect x="1432" y="752" width="56" height="4" rx="2"/>
+    <rect x="1414" y="778" width="92" height="4" rx="2"/>
+    <rect x="1438" y="806" width="44" height="4" rx="2"/>
+    <rect x="1428" y="836" width="64" height="4" rx="2"/>
+  </g>
+  <g fill="#f6c56b" opacity="0.45">
+    <rect x="1102" y="716" width="46" height="3" rx="1.5"/>
+    <rect x="1110" y="736" width="30" height="3" rx="1.5"/>
+  </g>
+</svg>

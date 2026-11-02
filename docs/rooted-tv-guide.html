@@ -242,7 +242,8 @@ HOME_CONFIG.allAppsShortcut = false;      // no All apps icon in the Apps row (D
 <p>Open Ambient Home's Settings with the cog at the top right. Hold <strong>OK</strong> on an app or an input for its menu.</p>
 <div class="table-wrap"><table>
   <tr><th>Where</th><th>What</th></tr>
-  <tr><td>Hold OK on an app</td><td><strong>Move</strong> (arrows, then OK or Back), <strong>Add to / Remove from Home screen</strong>, <strong>Hide app</strong>. Works in the Apps row and in All apps, and with the Magic Remote's button held.</td></tr>
+  <tr><td>Hold OK on an app</td><td><strong>Move</strong> (arrows, then OK or Back), <strong>Add to / Remove from Home screen</strong>, <strong>Hide app</strong>, <strong>Uninstall</strong> (asks first, starting on Cancel; apps the TV calls system apps, Ambient Home, Home Helper and the Homebrew Channel are refused). Works in the Apps row and in All apps, and with the Magic Remote's button held.</td></tr>
+  <tr><td>Back on the Apps row</td><td><strong>Recent apps</strong>: the last 8 apps and inputs you opened; OK opens one.</td></tr>
   <tr><td>Hold OK on an input</td><td><strong>Rename</strong> (on-screen keyboard) and <strong>Hide input</strong> / <strong>Show input</strong>.</td></tr>
   <tr><td>Settings &gt; Home button opens</td><td>Ambient Home or LG Home.</td></tr>
   <tr><td>Settings &gt; When the TV turns on</td><td><strong>Ambient Home</strong> (straight into it, behind LG's start-up cover) or <strong>LG's choice</strong> (the last input, or LG Home if Home Auto Launch is on). Counts from the next restart; <strong>Restart the TV now</strong> appears while a change waits for one. Needs the Home button set to Ambient Home.</td></tr>
@@ -365,6 +366,8 @@ HOME_CONFIG.allAppsShortcut = false;      // no All apps icon in the Apps row (D
   <li><strong>Tall cards like Settings</strong> keep a margin and scroll.</li>
   <li><strong>Settings &gt; Running apps:</strong> Close, Keep closed, Close all background apps, and close background apps when Ambient Home starts.</li>
   <li><strong>Power-on straight into Ambient Home:</strong> the startup script writes <code>/var/luna/preferences/bootd.json</code>, a copy of LG's <code>/etc/palm/bootd.json</code> whose power-on table sends the power button, the TV's own button and a cold start to Ambient Home (the method <a href="https://github.com/rudra-avatar/Hearth">Hearth</a> uses). It opens behind LG's start-up cover. Only a copy written by the script is ever replaced or removed.</li>
+  <li><strong>Recent apps</strong> (Back on the Apps row) and <strong>Uninstall</strong> in an app's menu, from the root script, which keeps the history and removes apps with webOS's installer.</li>
+  <li><strong>A start-up picture</strong> (<code>prototype/splash.png</code>, made from <code>splash.svg</code>) for LG's start-up cover.</li>
   <li><strong>Faster start:</strong> no grey splash screen (<code>noSplashOnLaunch</code>), and the second screen is built just after the page loads, so it loads in about 1 second instead of 4.</li>
 </ul>
 

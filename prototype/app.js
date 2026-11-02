@@ -267,6 +267,82 @@
     setTimeout(function () { appRequest('closeBackground', null, function () { toast('Background apps closed'); }); }, 10000);
   }
 
+  // ---------- Recent apps: Back on the Apps row (rooted TVs) ----------
+  // tv-root-live.js keeps the apps and inputs last opened, newest first, in recent.json; OK on one opens it.
+  function appKeyFor(appId) {
+    var key = null;
+    Object.keys(C.apps).forEach(function (k) { if (!key && (C.apps[k].appId === appId || k === appId)) key = k; });
+    return key;
+  }
+
+  function openRecent() {
+    var x = new XMLHttpRequest();
+    x.onload = function () {
+      var ids = [];
+      try { ids = JSON.parse(x.responseText); } catch (e) { /* none yet */ }
+      showRecent(ids);
+    };
+    x.onerror = function () { showRecent([]); };
+    x.open('GET', 'recent.json');
+    x.send();
+  }
+
+  function showRecent(ids) {
+    var track = byId('recentTrack'), shown = 0;
+    track.innerHTML = '';
+    (ids instanceof Array ? ids : []).forEach(function (appId) {
+      if (shown >= 8) return;
+      var key = appKeyFor(appId), inp = null;
+      C.inputs.forEach(function (i) { if (i.appId === appId) inp = i; });
+      if (key && !isHidden(key)) {
+        track.appendChild(appTile(key, 0, 'dock'));
+        shown++;
+      } else if (inp) {
+        var t = inputTile(namedInput(inp));
+        t.dataset.row = 0;
+        track.appendChild(t);
+        shown++;
+      }
+    });
+    if (shown) openOverlay(byId('recentApps'));
+    else toast('No recent apps yet');
+  }
+
+  // ---------- Uninstall: Hold OK on an app > Uninstall (rooted TVs) ----------
+  // tv-root-live.js removes it with webOS's own installer, only if webOS calls it removable and not a system app, and
+  // reports in uninstall.json. The question starts on Cancel.
+  var uninstallTarget = null;
+
+  function askUninstall(e) {
+    var app = C.apps[e.dataset.id];
+    if (!onTv()) { toast('This works on the TV'); return; }
+    if (!app || !app.appId) { toast(e.dataset.title + ' is not installed on this TV'); return; }
+    uninstallTarget = { appId: app.appId, title: e.dataset.title };
+    byId('uninstallTitle').textContent = 'Uninstall ' + e.dataset.title + '?';
+    openOverlay(byId('confirmUninstall'));
+    setFocus(byId('uninstallCancel'));
+  }
+
+  function uninstallConfirmed() {
+    var t = uninstallTarget, since = Date.now();
+    appRequest('uninstall', t.appId, function () { toast('Uninstalling ' + t.title + '…'); pollUninstall(t, since, 0); });
+  }
+
+  function pollUninstall(t, since, tries) {
+    var x = new XMLHttpRequest();
+    x.onload = x.onerror = function () {
+      var d = null;
+      try { d = JSON.parse(x.responseText); } catch (e) { /* not yet */ }
+      if (d && d.id === t.appId && d.time >= since) {
+        toast(d.ok ? t.title + ' uninstalled' : t.title + ' can\'t be uninstalled: ' + d.why);
+      } else if (tries < 90) {
+        setTimeout(function () { pollUninstall(t, since, tries + 1); }, 1000);
+      }
+    };
+    x.open('GET', 'uninstall.json');
+    x.send();
+  }
+
   // ---------- Settings > When the TV turns on (rooted TVs) ----------
   // tv-root-boot.sh has LG's boot service open Ambient Home at power-on while this says so and the Home button is set
   // to Ambient Home. LG reads that only as the TV starts, so power-on.json also says what it read at this start.
@@ -751,6 +827,8 @@
   function activate(e) {
     if (!e) return;
     var action = e.dataset.action, id = e.dataset.id;
+    // Opening something from Recent apps closes that panel first, so it is not there on the way back.
+    if ((action === 'app' || action === 'input') && stack.length && stack[stack.length - 1].ov.id === 'recentApps') closeOverlay();
     if (action === 'app') launchApp(id);
     else if (action === 'input') switchInput(namedInput(find(C.inputs, id)));
     else if (action === 'inputrename') { closeOverlay(); openRename(menuInput); }
@@ -769,6 +847,8 @@
     else if (action === 'appmove') { closeOverlay(); startMoving(menuApp); }
     else if (action === 'apppin') { closeOverlay(); togglePin(menuApp); }
     else if (action === 'apphide') { closeOverlay(); hideApp(menuApp); }
+    else if (action === 'appuninstall') { closeOverlay(); askUninstall(menuApp); }
+    else if (action === 'uninstallyes') { closeOverlay(); uninstallConfirmed(); }
     else if (action === 'hiddenapps') openHiddenApps();
     else if (action === 'runningapps') openRunning();
     else if (action === 'closeapp') closeRunning(e);
@@ -1137,6 +1217,7 @@
     if (key === 'back') {
       if (stack.length) closeOverlay();
       else if (page === 'b') setFocus(memory['ui:1'] || byId('appsTrack').firstChild);
+      else openRecent();
       return;
     }
     if (key === 'ok') {

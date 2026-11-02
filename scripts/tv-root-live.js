@@ -204,6 +204,48 @@ async function enforceKeepClosed(apps) {
   return closed;
 }
 
+// ---------- Recent apps (Back on Ambient Home's Apps row) ----------
+// The apps and inputs last opened, newest first, kept across restarts and copied to recent.json in Ambient Home's
+// folder. Ambient Home, LG Home, Home Helper and system overlays are not counted.
+const RECENT = '/var/lib/webosbrew/ambient-home/recent.json';
+const NOT_RECENT = /^(com\.local\.(ambienthome|nativehome)|com\.webos\.app\.(home|cpcover|voice|inputcommon|livemenu|.*overlay.*))$/;
+
+function recentList() {
+  try { const list = JSON.parse(fs.readFileSync(RECENT, 'utf8')); return Array.isArray(list) ? list : []; } catch (e) { return []; }
+}
+
+function noteRecent(id) {
+  const list = recentList();
+  if (NOT_RECENT.test(id) || list[0] === id) return;
+  fs.writeFileSync(RECENT, JSON.stringify([id].concat(list.filter((x) => x !== id)).slice(0, 12)));
+  writeRecent();
+}
+
+function writeRecent() {
+  if (fs.existsSync(APP)) writeIfChanged(APP + '/recent.json', JSON.stringify(recentList()) + '\n', null, 0o644);
+}
+
+// ---------- Uninstall (Hold OK on an app > Uninstall) ----------
+// Only apps webOS itself calls removable and not system apps, and never Ambient Home, Home Helper or the Homebrew
+// Channel. The result goes to uninstall.json in Ambient Home's folder, for its message.
+const NEVER_UNINSTALL = ['com.local.ambienthome', 'com.local.nativehome', 'org.webosbrew.hbchannel'];
+
+async function uninstall(id) {
+  const info = await luna('luna://com.webos.applicationManager/getAppInfo', { id: id });
+  const app = info && (info.appInfo || info);
+  let ok = false, why = '';
+  if (NEVER_UNINSTALL.indexOf(id) >= 0 || !app || app.removable !== true || app.systemApp) {
+    why = 'part of the TV or of this setup';
+  } else {
+    let r = await luna('luna://com.webos.appInstallService/remove', { id: id });
+    if (!r || r.returnValue === false) r = await luna('luna://com.webos.appInstallService/dev/remove', { id: id });
+    ok = !!r && r.returnValue !== false;
+    why = ok ? '' : (r && r.errorText) || 'the TV did not answer';
+  }
+  log('uninstall ' + id + ': ' + (ok ? 'done' : why));
+  if (fs.existsSync(APP)) writeIfChanged(APP + '/uninstall.json', JSON.stringify({ id: id, ok: ok, why: why, time: Date.now() }) + '\n', null, 0o644);
+}
+
 // ---------- Settings > When the TV turns on ----------
 // The choice (ambient, the default, or lg) is kept for tv-root-boot.sh, which writes or removes LG's boot table copy
 // (--bootd). LG's boot service reads that only as the TV starts, so power-on.json in Ambient Home's folder also says
@@ -271,6 +313,8 @@ async function handleRequests() {
         if (req.on === true) await closeApp(req.id);
       } else if (req.action === 'powerOn' && (req.value === 'ambient' || req.value === 'lg')) {
         await setPowerOn(req.value);
+      } else if (req.action === 'uninstall' && /^[\w.-]+$/.test(req.id || '')) {
+        await uninstall(req.id);
       } else if (req.action === 'restart') {
         log('restarting the TV, asked from Settings');
         await luna('luna://com.webos.service.sleep/shutdown/machineReboot', { reason: 'remoteKey' });
@@ -341,6 +385,7 @@ function watchPower() {
   });
   subscribe('luna://com.webos.applicationManager/getForegroundAppInfo', (line) => {
     const m = /"appId":"([^"]+)"/.exec(line);
+    if (m) noteRecent(m[1]);
     if (!m || m[1] === 'com.local.ambienthome' || Date.now() > poweringOnUntil || !homeIsOurs()) return;
     poweringOnUntil = 0;
     openAmbientHome('over ' + m[1]);
@@ -372,7 +417,7 @@ function stremio() {
 if (alreadyRunning()) process.exit(0);
 fs.writeFileSync(PID, String(process.pid));
 (function loop() {
-  tick().then(stremio).then(writeRunning).then(writePowerOn).catch((e) => log(String(e && e.stack || e))).then(() => setTimeout(loop, EVERY));
+  tick().then(stremio).then(writeRunning).then(writePowerOn).then(writeRecent).catch((e) => log(String(e && e.stack || e))).then(() => setTimeout(loop, EVERY));
 })();
 setInterval(handleRequests, 1000);
 watchPower();
