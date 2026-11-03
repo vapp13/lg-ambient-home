@@ -1097,6 +1097,15 @@
     }
   }
 
+  // Home Helper opens this app whenever Home is pressed, also while it is already on screen (the root script does too,
+  // at power-on). Show the home screen itself, so Home always does something you can see: wake the idle screen and
+  // close any open sheet. (From Chandra-K-Pendyala/ambient-home 5e279d9.)
+  function comeHome() {
+    if (idleOn) exitIdle();
+    else resetIdle();
+    while (stack.length) closeOverlay();
+  }
+
   // ---------- Overlays ----------
   function openOverlay(ov) {
     stack.push({ ov: ov, scope: scope, focus: current });
@@ -1420,7 +1429,8 @@
   window.addEventListener('resize', fit);
   // The living lakeside rests while the idle screen is up.
   SCENE.motion(savedMotion());
-  SCENE.mount(stage, { paused: function () { return idleOn; } });
+  // The living lakeside rests while the idle screen is up, and while another app is on screen.
+  SCENE.mount(stage, { paused: function () { return idleOn || document.hidden; } });
   byId('wallpaper').appendChild(el('div', 'dim fill'));
   buildRows();
   // With no splash screen, webOS shows the app once the page has loaded: the second page (All apps and Stremio's
@@ -1451,12 +1461,23 @@
   document.addEventListener('keyup', onKeyUp);
   window.addEventListener('blur', releaseOk);
   if (window.PalmSystem && wantsHelper(window.PalmSystem.launchParams)) openSettings();
-  document.addEventListener('webOSRelaunch', function (ev) { if (wantsHelper(ev.detail)) openSettings(); });
+  document.addEventListener('webOSRelaunch', function (ev) { if (wantsHelper(ev.detail)) openSettings(); else comeHome(); });
   // When an app takes over the screen, put the home screen back so it is ready when you return.
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden) releaseOk();
-    if (document.hidden && moving) stopMoving();
-    if (document.hidden && stack.length && stack[stack.length - 1].ov.id === 'launch') closeOverlay();
+    if (document.hidden) {
+      releaseOk();
+      if (moving) stopMoving();
+      // webOS freezes this page while another app is on screen and runs its overdue timers the moment it is back, so a
+      // countdown left running brought the idle screen up right after leaving an app. Count only while on screen.
+      // (From Chandra-K-Pendyala/ambient-home 5e279d9.)
+      clearTimeout(idleTimer);
+      // When an app takes over the screen, put the home screen back so it is ready when you return.
+      if (stack.length && stack[stack.length - 1].ov.id === 'launch') closeOverlay();
+    } else if (idleOn) {
+      exitIdle();
+    } else {
+      resetIdle();
+    }
   });
   stage.addEventListener('mousemove', onPointerMove);
   stage.addEventListener('click', onClick);
