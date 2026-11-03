@@ -18,23 +18,38 @@ LG Ambient Home turns your TV's home screen into a living lakeside world that fo
 
 > [!NOTE]
 > **Based on [Ambient Home](https://github.com/Chandra-K-Pendyala/ambient-home) by Chandra-K-Pendyala**, which this project grew from: the lakeside scene, the home screen and Home Helper are his work. LG Ambient Home is a separate project that takes it in its own direction for rooted TVs; see *Credits* below.
+
 Only want the scenery? **Ambient Wallpaper** runs the living lakeside on its own, as a TV app or in any browser.
 
 > [!NOTE]
-> Ambient Home is a working prototype. The home screen, opening apps and inputs, and the Home button all run on a real TV. The *Continue watching* and *Home* rows are demo designs for a media server and Home Assistant.
+> Everything below runs every day on an LG OLED65C34LA (webOS 23), rooted with the Homebrew Channel. Without root the home screen, the scene, opening apps and inputs and the Home button work too, through LG's Developer Mode; the parts marked 🔓 need root. The demo *Home* row (Home Assistant) is a design only and can be hidden.
 
 ## ✨ Features
 
-- 🌅 **Living wallpaper**: dawn, day, golden hour, dusk and a starry night under the real moon; clear skies, clouds, rain, thunderstorms, snow and fog; spring blossom, autumn leaves and winter snow that settles on the land; birds, shooting stars and chimney smoke. Live weather comes from [Open-Meteo](https://open-meteo.com) (free, no account) once you add your coordinates; until then it shows demo weather.
-- 🗓️ **The week ahead**: the next four days sit under the current weather, and the whole week, with each day's range and chance of rain, is one press away.
-- 🌌 **Ambient Wallpaper**: the same living lake as its own app, with the clock, the weather and the next five days resting on the water.
-- 🧊 **Frosted-glass icons**: they rest on the lake, and on focus they lift, bloom into the app's brand colours and ripple the water. Snow caps pile up on them while it snows.
-- 🎮 **Quick inputs**: number keys on the remote switch HDMI inputs, and a games-console tile plays its own launch animation.
-- 📺 **Your real apps**: a script on your computer reads the TV's installed apps and inputs (read-only), so every tile opens the real thing.
-- 🏠 **Home button**: the remote's Home key opens Ambient Home instead of LG's home screen, with no rooting.
-- 🛟 **Always a way back**: hold Back for LG Home once, press Home three times to hand Home back to LG, or switch it in Settings.
-- 🌙 **OLED-safe idle clock**: a calm clock that drifts slowly so nothing burns in.
-- ⚡ **Smooth on a TV**: only position and opacity animate, and quality steps down by itself when the TV struggles. It reaches about 50 fps on a real TV, the ceiling for animated web pages there.
+### 🌄 The living lakeside
+
+- 🌅 **A living wallpaper**: dawn, day, golden hour, dusk and a starry night under the real moon; clear skies, clouds, rain, thunderstorms, snow and fog; spring blossom, autumn leaves and winter snow that settles on the land; birds, shooting stars and chimney smoke. Live weather from [Open-Meteo](https://open-meteo.com) (free, no account) once you add your coordinates.
+- 🗓️ **The week ahead**: the next four days under the current weather, and the whole week one press away.
+- 🧊 **Frosted-glass icons** that lift, bloom into the app's colours and ripple the water on focus, with snow caps while it snows.
+- ⚡ **Smooth on a TV**: a steady 60 fps (the panel's own rate). The scene appears complete but still and comes to life once the page draws smoothly, so the first seconds after switching on don't stutter; quality steps down by itself if the TV ever struggles. **Settings > Animations** chooses Full, Reduced or Off.
+- 🌙 **OLED-safe idle clock** that drifts slowly so nothing burns in. It only counts while the home screen is on screen, and Home wakes it.
+
+### 🏠 Your home screen
+
+- 📺 **Your real apps and inputs**, with their own icons. On a rooted TV they stay up to date by themselves 🔓: install or remove an app, plug in a console, and the home screen follows within seconds.
+- ✋ **Hold OK on an app** to **Move** it (in the Apps row or All apps), **Add to / Remove from the Home screen**, **Hide** it, or **Uninstall** it 🔓 (it asks first; system apps are refused). Hidden apps come back from Settings, and apps keep their place when hidden or reinstalled. The Magic Remote works too: hold its button.
+- 🎮 **Inputs**: number keys switch HDMI inputs; hold OK on one to **rename** or **hide** it. Inputs with no device name and nothing connected stay out of the way until something is plugged in.
+- ⬇️ **Two screens**: your shortcuts and inputs, and below them (press Down) Stremio's *Continue watching* and **All apps**.
+- 🍿 **Stremio's Continue watching** 🔓: your unfinished films and episodes with their pictures and progress, read with the Stremio app's own sign-in on the TV, also what you watched on your phone. A card opens Stremio, where the same title waits first in its own row.
+- ↩️ **Recent apps** 🔓: Back on the Apps row shows the apps and inputs you opened last.
+
+### 🔓 A rooted TV becomes yours
+
+- ⚡ **Starts straight into Ambient Home**: the TV opens it as it is switched on, behind LG's start-up cover, with no LG Home or input first (LG's own boot table; method from [Hearth](https://github.com/rudra-avatar/Hearth)). **Settings > When the TV turns on** chooses Ambient Home or LG's choice. A console switching the TV on over HDMI-CEC still gets its input.
+- 🏠 **The Home button** opens Ambient Home, and leaving an app (Back, or its own Exit) brings you back to it.
+- 🧹 **Settings > Running apps**: what is running and how much memory each app uses; **Close**, **Close all background apps**, **Keep closed** (switches off LG's preloading of that app and closes it whenever you leave it, so LG Channels, YouTube or Netflix stop coming back by themselves), and closing background apps a few seconds after Ambient Home starts.
+- 🚀 **A head start**: while it is on screen, Ambient Home's page runs at a higher CPU priority than LG's own services.
+- 🛟 **Always a way back**: hold Back for LG Home once, press Home three times to hand Home back to LG, or switch it in Settings; `scripts/tv-home.sh remove` takes everything off.
 
 ## 🖼️ Through the day and the year
 
@@ -88,6 +103,27 @@ flowchart LR
 
 <img src="docs/screenshots/settings.jpg" alt="Ambient Home's settings: Home button opens this home screen or LG Home, open LG Home once, idle screen and weather" width="100%">
 
+## ⚙️ Settings and menus
+
+Settings opens from the cog at the top right; hold **OK** on an app or input for its menu. 🔓 needs a rooted TV.
+
+| Where | What it does |
+| :-- | :-- |
+| **Home button opens** | This home screen or LG Home; *Open LG Home once* for a quick visit. |
+| **When the TV turns on** 🔓 | Ambient Home (straight into it) or LG's choice (the last input, or LG Home). Counts from the next restart; *Restart the TV now* appears while a change is waiting. |
+| **Idle screen after** | 1, 5 or 10 minutes, or off. Kept across restarts. |
+| **Animations** | Full, Reduced (no leaves, fireflies, glitter or smoke; clouds and stars still) or Off (a still scene). |
+| **All apps shortcut on the Home screen** | Show or hide the All apps icon at the end of the Apps row (Down always reaches All apps). |
+| **Hidden apps** | The apps you hid; OK on one brings it back. |
+| **Running apps** 🔓 | Running apps with their memory; Close, Keep closed, Close all background apps, and *When Ambient Home starts: Close background apps*. |
+| **Inputs** | In use only (unused ones out of the way) or All inputs (hidden ones dimmed). |
+| **Weather** | The location in use, from `prototype/config.local.js`. |
+| Hold OK on an app | Move, Add to / Remove from Home screen, Hide app, Uninstall 🔓. |
+| Hold OK on an input | Rename, Hide input / Show input. |
+| Back on the Apps row 🔓 | Recent apps. |
+
+`prototype/config.local.js` (kept out of git) holds what isn't in Settings: your coordinates, and `HOME_CONFIG.media.show = false` / `HOME_CONFIG.home.show = false` to hide the demo rows, `HOME_CONFIG.allAppsShortcut = false` for the default shortcut choice.
+
 ## 🚀 Get started
 
 ### 👀 Preview it on your computer
@@ -137,29 +173,35 @@ If your TV is rooted and has the [Homebrew Channel](https://github.com/webosbrew
    ```
 4. **Restart the TV** by unplugging it for 30 seconds: the power button only puts it in standby. Once a key is on the TV, the Homebrew Channel stops setting the `alpine` password at startup.
 
-Then follow the steps above from step 2, leaving out step 3: on a rooted TV your apps and inputs stay up to date by themselves. The scripts see that the TV is registered as root and install over SSH. They also add a small startup script, [`scripts/tv-root-boot.sh`](scripts/tv-root-boot.sh), to the Homebrew Channel's startup folder. At every boot the TV makes Developer Mode files writable by any app, and Home Helper refuses to start like that, so the script puts back safe permissions and starts Helper. It also lets Ambient Home's settings see Home Helper, and starts [`scripts/tv-root-live.js`](scripts/tv-root-live.js), which notices apps you install or remove and devices you plug in, and updates Ambient Home within seconds. It also fills Ambient Home's Continue watching from Stremio, using the Stremio app's own sign-in on the TV, and powers Settings > Running apps, where you can see what is running, how much memory each app uses, and close apps. Keep closed stops LG's preload manager from starting an app in the background and closes it a few seconds after you leave it. `scripts/tv-home.sh remove` takes it all off again.
+Then follow the steps above from step 2, leaving out step 3, and restart the TV once more so it starts straight into Ambient Home. The scripts see that the TV is registered as root and install over SSH. They also put two things in the Homebrew Channel's startup folder:
+
+- [`scripts/tv-root-boot.sh`](scripts/tv-root-boot.sh), run at every boot: puts back safe file permissions (the TV makes Developer Mode files writable by any app at boot, and Home Helper won't start like that), lets Ambient Home's settings reach Home Helper, writes LG's boot table copy for *When the TV turns on*, and starts Helper and the live script.
+- [`scripts/tv-root-live.js`](scripts/tv-root-live.js) (with [`tv-root-stremio.js`](scripts/tv-root-stremio.js)), running as root: the live app and input list, Stremio's Continue watching, Running apps and Keep closed, Recent apps, Uninstall, and opening Ambient Home at power-on.
+
+`scripts/tv-home.sh remove` takes it all off again.
 
 ## 🗂️ What's inside
 
 | Folder | What lives there |
 | :-- | :-- |
 | [`prototype/`](prototype) | Both apps, in plain ES5 for 1920×1080: Ambient Home (`index.html`, `app.js`), Ambient Wallpaper (`wallpaper.html`, `wallpaper.js`) and the living lakeside they share (`scene.js`, `scene.css`) |
-| [`home-service/`](home-service) | Ambient Home's small on-TV service, which switches the Home button |
+| [`home-service/`](home-service) | Ambient Home's small on-TV service: the Home button switch, and requests to the root scripts (Running apps, Keep closed, Uninstall, power-on) |
 | [`helper/`](helper) | Home Helper, reviewed and built from source; [every change from upstream](helper/README.md) |
-| [`scripts/`](scripts) | Preview, sync, build and install tools |
-| [`docs/`](docs) | The screenshots above |
+| [`scripts/`](scripts) | Preview, sync, build and install tools, and the rooted TV's startup and live scripts (`tv-root-*`) |
+| [`docs/`](docs) | [The step-by-step guide for rooted TVs](docs/rooted-tv-guide.html) and the screenshots above |
 
 ## 🔒 Privacy and safety
 
-- 🔐 **No root, no firmware changes**: everything runs as Developer Mode apps that one command removes.
+- 🔐 **No firmware changes**: everything runs as Developer Mode apps and, on a rooted TV, two scripts in the Homebrew Channel's startup folder. LG's files are never edited; the boot table is a separate copy LG reads instead, and `scripts/tv-home.sh remove` takes it all off.
 - 🧾 **Built from reviewed source**: Home Helper is compiled here from source; upstream's prebuilt packages are never used.
 - 🧱 **Locked-down install**: both packages install root-owned files that other apps on the TV can't change.
-- 🙈 **Your details stay yours**: pairing keys, your app list and `config.local.js` stay on your computer and TV, out of git.
-- 🌐 **Quiet on the network**: nothing is sent anywhere except optional weather requests to Open-Meteo. Home Helper talks only to the TV itself.
+- 🙈 **Your details stay yours**: pairing keys, your app list and `config.local.js` stay on your computer and TV, out of git. The Stremio sign-in is read on the TV, used only to ask Stremio's server for your library, and never written to a file.
+- 🧯 **Careful with what it removes**: Uninstall asks first and refuses system apps, Ambient Home, Home Helper and the Homebrew Channel; the root scripts take only a handful of fixed requests from Ambient Home.
+- 🌐 **Quiet on the network**: weather from Open-Meteo, and on a rooted TV your Stremio library from Stremio's server and its pictures. Home Helper talks only to the TV itself.
 
 ## 🤖 How it was made
 
-Ambient Home was built in a few evenings of conversation with Claude Code. [The prompts, in order, and one prompt to start from](docs/HOW-IT-WAS-MADE.md) show how it came together.
+Ambient Home was built in a few evenings of conversation with Claude Code. [The prompts, in order, and one prompt to start from](docs/HOW-IT-WAS-MADE.md) show how it came together. LG Ambient Home grew from it the same way, on a rooted TV, with every change tested on the TV itself.
 
 ## 🙏 Credits
 
