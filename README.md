@@ -2,19 +2,22 @@
 
 <img src="docs/screenshots/golden-hour.jpg" alt="Ambient Home at golden hour: mountains, pines and a cabin by a lake, with the clock, the weather and frosted-glass app icons" width="100%">
 
-# 🌄 Ambient Home
+# 🌄 LG Ambient Home
 
-### A living lakeside home screen for LG webOS TVs
+### A living lakeside home screen for rooted LG webOS TVs
 
 <img alt="LG webOS" src="https://img.shields.io/badge/LG-webOS-A50034?style=for-the-badge&logo=lg&logoColor=white">
-<img alt="No root needed" src="https://img.shields.io/badge/root-not_needed-22c55e?style=for-the-badge">
+<img alt="Rooted with the Homebrew Channel" src="https://img.shields.io/badge/rooted-Homebrew_Channel-22c55e?style=for-the-badge">
 <img alt="Vanilla JavaScript (ES5)" src="https://img.shields.io/badge/vanilla-JS_(ES5)-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black">
-<img alt="About 50 fps on the TV" src="https://img.shields.io/badge/on_the_TV-~50_fps-14B8C7?style=for-the-badge">
+<img alt="60 fps on the TV" src="https://img.shields.io/badge/on_the_TV-60_fps-14B8C7?style=for-the-badge">
 <img alt="MIT license" src="https://img.shields.io/badge/license-MIT-8B5CF6?style=for-the-badge">
 
 </div>
 
-Ambient Home turns your TV's home screen into a living lakeside world that follows the real sun, moon, weather and seasons. You install it yourself in LG's Developer Mode, without rooting the TV, and the remote's Home button opens it instead of LG's home screen. Every way back to LG Home stays one press away.
+LG Ambient Home turns your TV's home screen into a living lakeside world that follows the real sun, moon, weather and seasons. On a TV rooted with the Homebrew Channel it becomes the TV's home: the TV starts straight into it, the remote's Home button opens it, your apps and inputs stay up to date by themselves, Stremio's *Continue watching* sits on the second screen, and Settings can see, close and keep closed the apps LG runs in the background. Every way back to LG Home stays one press away. It is installed from a Windows, Mac or Linux computer; [`docs/rooted-tv-guide.html`](docs/rooted-tv-guide.html) walks through it command by command.
+
+> [!NOTE]
+> **Based on [Ambient Home](https://github.com/Chandra-K-Pendyala/ambient-home) by Chandra-K-Pendyala**, which this project grew from: the lakeside scene, the home screen and Home Helper are his work. LG Ambient Home is a separate project that takes it in its own direction for rooted TVs; see *Credits* below.
 Only want the scenery? **Ambient Wallpaper** runs the living lakeside on its own, as a TV app or in any browser.
 
 > [!NOTE]
@@ -159,6 +162,9 @@ Then follow the steps above from step 2, leaving out step 3: on a rooted TV your
 Ambient Home was built in a few evenings of conversation with Claude Code. [The prompts, in order, and one prompt to start from](docs/HOW-IT-WAS-MADE.md) show how it came together.
 
 ## 🙏 Credits
+
+- **[Ambient Home](https://github.com/Chandra-K-Pendyala/ambient-home)** by **Chandra-K-Pendyala** (MIT): the original project. The lakeside scene, the home screen, Ambient Wallpaper and the reviewed Home Helper come from it, and two of its later fixes (the idle screen setting, and the idle screen after leaving an app) are included here.
+- **[Hearth](https://github.com/rudra-avatar/Hearth)** by rudra-avatar (MIT): the way to start the TV straight into the home screen through LG's boot table.
 
 - **Home Helper** from [Razdva122/clean-your-tv-lg-webos](https://github.com/Razdva122/clean-your-tv-lg-webos) (MIT), one of the LG webOS ports of Clean Your TV.
 - [ws](https://github.com/websockets/ws) (MIT) · [Outfit](https://fonts.google.com/specimen/Outfit) font (SIL OFL 1.1) · [Simple Icons](https://simpleicons.org) (CC0) · [Lucide](https://lucide.dev) (ISC) · the Disney+ logo from Wikimedia Commons · weather by [Open-Meteo](https://open-meteo.com).

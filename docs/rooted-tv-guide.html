@@ -150,11 +150,9 @@
 
 <div class="step">
 <h3><span class="n">2</span>Get the project</h3>
-<div class="cmd"><pre>git clone https://github.com/vapp13/ambient-home.git
-cd ambient-home</pre></div>
-<p>Until the rooted-TV work is merged into <code>main</code>, switch to its branch (skip this once it is merged):</p>
-<div class="cmd"><pre>git checkout rooted-tv-windows</pre></div>
-<p>Every later command runs from this <code>ambient-home</code> folder.</p>
+<div class="cmd"><pre>git clone https://github.com/vapp13/lg-ambient-home.git
+cd lg-ambient-home</pre></div>
+<p>Every later command runs from this <code>lg-ambient-home</code> folder.</p>
 </div>
 
 <div class="step">
@@ -264,7 +262,7 @@ HOME_CONFIG.allAppsShortcut = false;      // no All apps icon in the Apps row (D
 
 <h2 id="everyday">6. Everyday commands</h2>
 <div class="table-wrap"><table>
-  <tr><th>To</th><th>Run (in Git Bash, in <code>ambient-home</code>)</th></tr>
+  <tr><th>To</th><th>Run (in Git Bash, in <code>lg-ambient-home</code>)</th></tr>
   <tr><td>Install a new version of Ambient Home after <code>git pull</code> or an edit</td><td><code>bash scripts/tv-preview.sh</code></td></tr>
   <tr><td>Reinstall Ambient Home and Home Helper together</td><td><code>TV_HOST=TV_IP bash scripts/tv-home.sh install</code>, then <code>bash scripts/tv-home.sh start</code></td></tr>
   <tr><td>See whether Helper is running</td><td><code>bash scripts/tv-home.sh status</code></td></tr>
@@ -316,7 +314,7 @@ HOME_CONFIG.allAppsShortcut = false;      // no All apps icon in the Apps row (D
 <p>Ambient Home's service only accepts calls from Ambient Home, and the root script only accepts four requests from it: refresh, close an app, keep an app closed, close background apps. It never closes Ambient Home, LG Home or Home Helper.</p>
 
 <h2 id="changes">9. Every change made</h2>
-<p>All on the branch <code>rooted-tv-windows</code> of <code>vapp13/ambient-home</code>, starting from <code>main</code> at <em>Add a weekly forecast and Ambient Wallpaper</em>.</p>
+<p>In <a href="https://github.com/vapp13/lg-ambient-home">vapp13/lg-ambient-home</a>, which grew from <a href="https://github.com/Chandra-K-Pendyala/ambient-home">Chandra-K-Pendyala/ambient-home</a>, starting from its <code>main</code> at <em>Add a weekly forecast and Ambient Wallpaper</em>.</p>
 
 <h3>Installing on a rooted TV, from Windows</h3>
 <ul>
